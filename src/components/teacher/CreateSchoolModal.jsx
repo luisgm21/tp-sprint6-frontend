@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { createSchoolSchema, zodToFieldErrors } from '../../validators/schoolValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { useAppContext } from '../../context/appContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const CreateSchoolModal = ({ open, onClose, onCreated }) => {
+  const { token, logout } = useAppContext()
   const [formData, setFormData] = useState({ name: '', description: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
@@ -30,10 +32,17 @@ const CreateSchoolModal = ({ open, onClose, onCreated }) => {
     try {
       const res = await fetch(`${API_URL}/api/schools/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       })
       const data = await res.json().catch(() => ({}))
+      if (res.status === 401 || res.status === 403) {
+        logout()
+        return
+      }
       if (!res.ok) throw new Error(data.error || 'Error al crear escuela')
       setFormData({ name: '', description: '' })
       setFieldErrors({})

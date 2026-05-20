@@ -1,17 +1,25 @@
 import { Outlet } from "react-router"
 import Navbar from "../components/pageComponents/Navbar"
 import Footer from "../components/pageComponents/Footer"
+import { useAppContext } from "../context/appContext"
 
 const MainLayout = () => {
+  const { isAuthenticated, authUser } = useAppContext()
+
+  const homePath = !isAuthenticated
+    ? "/login"
+    : authUser?.role === "admin"
+      ? "/admin/users"
+      : "/teacher/dashboard"
+
   const navConfig = {
     brand: {
       label: "Minimal",
-      to: "/",
+      to: homePath,
     },
     links: [
-      { to: "/", label: "Inicio" },
-      { to: "/servicios", label: "Servicios" },
-      { to: "/contacto", label: "Contacto" },
+      { to: homePath, label: "Inicio" },
+      { to: "/teacher/settings", label: "Configuracion" },
     ],
   }
 

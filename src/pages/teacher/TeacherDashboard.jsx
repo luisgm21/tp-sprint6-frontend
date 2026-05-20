@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Swal from 'sweetalert2'
 import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
 import CreateCourseModal from '../../components/teacher/CreateCourseModal'
 import EditCourseModal from '../../components/teacher/EditCourseModal'
 import ManageCourseStudentsModal from '../../components/teacher/ManageCourseStudentsModal'
+import { useAppContext } from '../../context/appContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const TeacherDashboard = () => {
+  const { token, authUser, logout } = useAppContext()
   const [showModal, setShowModal] = useState(false)
   const [showCourseModal, setShowCourseModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -16,11 +18,76 @@ const TeacherDashboard = () => {
   const [selectedCourseForStudents, setSelectedCourseForStudents] = useState(null)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   // Estructura: { [schoolId]: [cursos] }
   const [coursesBySchool, setCoursesBySchool] = useState({})
 
-  const handleSchoolCreated = (school) => {
-    setSchools((prev) => [...prev, school])
+  const getSchoolId = (value) => {
+    if (!value) return ''
+    if (typeof value === 'object') return value._id || ''
+    return value
+  }
+
+  const loadDashboardData = useCallback(async () => {
+    if (!token || !authUser?.id) {
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    setLoadError('')
+
+    try {
+      const schoolsRes = await fetch(`${API_URL}/api/schools/mine`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const schoolsData = await schoolsRes.json().catch(() => [])
+      if (schoolsRes.status === 401 || schoolsRes.status === 403) {
+        logout()
+        return
+      }
+      if (!schoolsRes.ok) {
+        throw new Error(schoolsData.error || 'No se pudieron cargar tus escuelas')
+      }
+
+      setSchools(schoolsData)
+
+      const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${authUser.id}`)
+      const coursesData = await coursesRes.json().catch(() => [])
+      if (!coursesRes.ok) {
+        throw new Error(coursesData.error || 'No se pudieron cargar tus cursos')
+      }
+
+      const grouped = (Array.isArray(coursesData) ? coursesData : []).reduce((acc, course) => {
+        const schoolId = getSchoolId(course.schoolId)
+        if (!schoolId) return acc
+
+        const normalizedCourse = {
+          ...course,
+          schoolId,
+        }
+
+        return {
+          ...acc,
+          [schoolId]: acc[schoolId] ? [...acc[schoolId], normalizedCourse] : [normalizedCourse],
+        }
+      }, {})
+
+      setCoursesBySchool(grouped)
+    } catch (err) {
+      setLoadError(err.message || 'No se pudo cargar la informacion del dashboard')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [token, authUser?.id, logout])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
+
+  const handleSchoolCreated = async () => {
+    await loadDashboardData()
   }
 
   const handleCourseCreated = (course) => {
@@ -89,7 +156,13 @@ const TeacherDashboard = () => {
         </button>
       </div>
       <section>
-        {schools.length === 0 ? (
+        {isLoading && <p className="text-zinc-500">Cargando escuelas...</p>}
+        {loadError && (
+          <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            {loadError}
+          </p>
+        )}
+        {!isLoading && schools.length === 0 ? (
           <p className="text-zinc-500">Aún no creaste escuelas.</p>
         ) : (
           <ul className="space-y-3">

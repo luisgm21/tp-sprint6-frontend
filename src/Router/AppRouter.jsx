@@ -9,6 +9,7 @@ import NotFoundPage from '../pages/NotFoundPage'
 import { useAppContext } from '../context/appContext'
 
 import TeacherDashboard from '../pages/teacher/TeacherDashboard'
+import TeacherSettingsPage from '../pages/teacher/TeacherSettingsPage'
 
 const AppRouter = () => {
   const { isAuthenticated, authUser } = useAppContext()
@@ -35,6 +36,7 @@ const AppRouter = () => {
         {/* Rutas protegidas solo para docentes */}
         <Route element={<ProtectedRoute requiredRole="teacher" />}>
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/settings" element={<TeacherSettingsPage />} />
         </Route>
 
         <Route path="*" element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />} />
