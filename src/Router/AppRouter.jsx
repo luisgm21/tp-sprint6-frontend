@@ -1,5 +1,5 @@
 import React from 'react'
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import MainLayout from '../layouts/MainLayout'
 import ProtectedRoute from '../components/common/ProtectedRoute'
 import LoginPage from '../components/auth/pages/LoginPage'
@@ -12,6 +12,7 @@ const AppRouter = () => {
   return (
     <Routes>
       <Route element={<MainLayout />}>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
@@ -24,6 +25,8 @@ const AppRouter = () => {
         <Route element={<ProtectedRoute requiredRole="teacher" />}>
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Route>
     </Routes>
   )
