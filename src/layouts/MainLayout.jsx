@@ -17,10 +17,12 @@ const MainLayout = () => {
       label: "Minimal",
       to: homePath,
     },
-    links: [
-      { to: homePath, label: "Inicio" },
-      { to: "/teacher/settings", label: "Configuracion" },
-    ],
+    links: isAuthenticated
+      ? [
+          { to: homePath, label: "Inicio" },
+          { to: "/teacher/settings", label: "Configuracion" },
+        ]
+      : [{ to: homePath, label: "Inicio" }],
   }
 
   return (
