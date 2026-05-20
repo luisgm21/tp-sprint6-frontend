@@ -24,7 +24,7 @@ export const registerSchema = z
       .min(1, 'La contraseña es obligatoria')
       .min(6, 'Mínimo 6 caracteres'),
     confirmPassword: z.string().min(1, 'Confirmá la contraseña'),
-    role: z.string().min(1, 'Seleccioná un rol'),
+    role: z.enum(['teacher', 'admin'], { message: 'Seleccioná un rol válido' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
