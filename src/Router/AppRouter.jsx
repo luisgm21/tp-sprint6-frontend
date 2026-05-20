@@ -6,6 +6,8 @@ import LoginPage from '../components/auth/pages/LoginPage'
 import RegisterPage from '../components/auth/pages/RegisterPage'
 import AdminUsersPage from '../pages/admin/AdminUsersPage'
 
+import TeacherDashboard from '../pages/teacher/TeacherDashboard'
+
 const AppRouter = () => {
   return (
     <Routes>
@@ -16,6 +18,11 @@ const AppRouter = () => {
         {/* Rutas protegidas solo para admin */}
         <Route element={<ProtectedRoute requiredRole="admin" />}>
           <Route path="/admin/users" element={<AdminUsersPage />} />
+        </Route>
+
+        {/* Rutas protegidas solo para docentes */}
+        <Route element={<ProtectedRoute requiredRole="teacher" />}>
+          <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
         </Route>
       </Route>
     </Routes>
