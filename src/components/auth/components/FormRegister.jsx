@@ -14,7 +14,7 @@ const FormRegister = ({ onSubmit, isLoading, error }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
+    role: 'teacher',
   })
   const [fieldErrors, setFieldErrors] = useState({})
 
