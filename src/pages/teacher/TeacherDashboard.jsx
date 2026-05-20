@@ -7,14 +7,21 @@ const TeacherDashboard = () => {
   const [showCourseModal, setShowCourseModal] = useState(false)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
-  const [courses, setCourses] = useState([])
+  // Estructura: { [schoolId]: [cursos] }
+  const [coursesBySchool, setCoursesBySchool] = useState({})
 
   const handleSchoolCreated = (school) => {
     setSchools((prev) => [...prev, school])
   }
 
   const handleCourseCreated = (course) => {
-    setCourses((prev) => [...prev, course])
+    setCoursesBySchool(prev => {
+      const schoolId = course.schoolId
+      return {
+        ...prev,
+        [schoolId]: prev[schoolId] ? [...prev[schoolId], course] : [course]
+      }
+    })
   }
 
   return (
@@ -50,7 +57,21 @@ const TeacherDashboard = () => {
                     + Crear curso
                   </button>
                 </div>
-                {/* Aquí podrías listar los cursos de la escuela si lo deseas */}
+                {/* Cursos de esta escuela */}
+                <div className="mt-4">
+                  {(coursesBySchool[school._id] && coursesBySchool[school._id].length > 0) ? (
+                    <ul className="space-y-2">
+                      {coursesBySchool[school._id].map((course) => (
+                        <li key={course._id || course.name} className="rounded border border-zinc-100 bg-zinc-50 p-3">
+                          <span className="font-medium text-zinc-700">{course.name}</span>
+                          {course.description && <span className="ml-2 text-zinc-500 text-sm">{course.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-zinc-400 text-sm">No hay cursos en esta escuela.</p>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
