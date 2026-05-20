@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
+import CreateCourseModal from '../../components/teacher/CreateCourseModal'
 
 const TeacherDashboard = () => {
   const [showModal, setShowModal] = useState(false)
+  const [showCourseModal, setShowCourseModal] = useState(false)
+  const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
+  const [courses, setCourses] = useState([])
 
   const handleSchoolCreated = (school) => {
     setSchools((prev) => [...prev, school])
+  }
+
+  const handleCourseCreated = (course) => {
+    setCourses((prev) => [...prev, course])
   }
 
   return (
@@ -30,14 +38,31 @@ const TeacherDashboard = () => {
           <ul className="space-y-3">
             {schools.map((school) => (
               <li key={school._id || school.name} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-                <h2 className="font-semibold text-zinc-800">{school.name}</h2>
-                {school.description && <p className="text-sm text-zinc-600 mt-1">{school.description}</p>}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-zinc-800">{school.name}</h2>
+                    {school.description && <p className="text-sm text-zinc-600 mt-1">{school.description}</p>}
+                  </div>
+                  <button
+                    className="ml-4 rounded-md bg-zinc-700 px-3 py-1 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+                    onClick={() => { setSelectedSchool(school); setShowCourseModal(true) }}
+                  >
+                    + Crear curso
+                  </button>
+                </div>
+                {/* Aquí podrías listar los cursos de la escuela si lo deseas */}
               </li>
             ))}
           </ul>
         )}
       </section>
       <CreateSchoolModal open={showModal} onClose={() => setShowModal(false)} onCreated={handleSchoolCreated} />
+      <CreateCourseModal
+        open={showCourseModal}
+        onClose={() => setShowCourseModal(false)}
+        onCreated={handleCourseCreated}
+        schools={selectedSchool ? [selectedSchool] : schools}
+      />
     </main>
   )
 }
