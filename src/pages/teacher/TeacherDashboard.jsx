@@ -5,6 +5,8 @@ import CreateCourseModal from '../../components/teacher/CreateCourseModal'
 import EditCourseModal from '../../components/teacher/EditCourseModal'
 import ManageCourseStudentsModal from '../../components/teacher/ManageCourseStudentsModal'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const TeacherDashboard = () => {
   const [showModal, setShowModal] = useState(false)
   const [showCourseModal, setShowCourseModal] = useState(false)
@@ -56,8 +58,9 @@ const TeacherDashboard = () => {
     })
     if (!result.isConfirmed) return
     try {
-      const res = await fetch(`/api/courses/delete/${course._id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Error al eliminar curso')
+      const res = await fetch(`${API_URL}/api/courses/deactivate/${course._id}`, { method: 'PATCH' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar curso')
       setCoursesBySchool(prev => {
         const schoolId = course.schoolId
         return {
@@ -67,7 +70,7 @@ const TeacherDashboard = () => {
       })
       Swal.fire('Éxito', 'Curso eliminado correctamente', 'success')
     } catch (err) {
-      Swal.fire('Error', err.message, 'error')
+      Swal.fire('Error', err.message || 'No se pudo eliminar el curso', 'error')
     }
   }
 

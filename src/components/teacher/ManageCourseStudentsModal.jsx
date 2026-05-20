@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import LoadingSpinner from '../common/LoadingSpinner'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const getSchoolId = (course) => {
   if (!course?.schoolId) return ''
   if (typeof course.schoolId === 'object') return course.schoolId._id || ''
@@ -97,7 +99,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
 
     setIsSubmittingManual(true)
     try {
-      const response = await fetch(`/api/enrollments/course/${course._id}/add-student`, {
+      const response = await fetch(`${API_URL}/api/enrollments/course/${course._id}/add-student`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,7 +108,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
           student: payload,
         }),
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'No se pudo agregar el alumno')
 
       setFormData({ firstName: '', lastName: '', documentNumber: '' })
@@ -158,13 +160,13 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
         throw new Error('No se encontraron filas válidas en el archivo')
       }
 
-      const response = await fetch(`/api/enrollments/course/${course._id}/add-students-bulk`, {
+      const response = await fetch(`${API_URL}/api/enrollments/course/${course._id}/add-students-bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schoolId, year, students }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'No se pudo importar el Excel')
 
       setBulkResult(data)

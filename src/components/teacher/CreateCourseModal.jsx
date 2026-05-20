@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { createCourseSchema, zodToFieldErrors } from '../../validators/courseValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const CreateCourseModal = ({ open, onClose, onCreated, schools }) => {
   const [formData, setFormData] = useState({ name: '', description: '', schoolId: '' })
   const [fieldErrors, setFieldErrors] = useState({})
@@ -26,12 +28,12 @@ const CreateCourseModal = ({ open, onClose, onCreated, schools }) => {
     }
     setIsLoading(true)
     try {
-      const res = await fetch('/api/courses/create', {
+      const res = await fetch(`${API_URL}/api/courses/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Error al crear curso')
       setFormData({ name: '', description: '', schoolId: '' })
       setFieldErrors({})
