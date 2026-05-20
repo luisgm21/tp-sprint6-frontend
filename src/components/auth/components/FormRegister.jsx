@@ -4,8 +4,6 @@ import LoadingSpinner from '../../common/LoadingSpinner'
 import { registerSchema, zodToFieldErrors } from '../../../validators/authValidators'
 
 const ROLES = [
-  { value: 'user', label: 'Usuario' },
-  { value: 'student', label: 'Estudiante' },
   { value: 'teacher', label: 'Docente' },
   { value: 'admin', label: 'Administrador' },
 ]
