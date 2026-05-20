@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import Swal from 'sweetalert2'
 import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
 import CreateCourseModal from '../../components/teacher/CreateCourseModal'
+import EditCourseModal from '../../components/teacher/EditCourseModal'
 
 const TeacherDashboard = () => {
   const [showModal, setShowModal] = useState(false)
   const [showCourseModal, setShowCourseModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingCourse, setEditingCourse] = useState(null)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
   // Estructura: { [schoolId]: [cursos] }
@@ -22,6 +26,46 @@ const TeacherDashboard = () => {
         [schoolId]: prev[schoolId] ? [...prev[schoolId], course] : [course]
       }
     })
+  }
+
+  const handleCourseEdited = (updatedCourse) => {
+    setCoursesBySchool(prev => {
+      const schoolId = updatedCourse.schoolId
+      return {
+        ...prev,
+        [schoolId]: prev[schoolId]
+          ? prev[schoolId].map(c => c._id === updatedCourse._id ? updatedCourse : c)
+          : [updatedCourse]
+      }
+    })
+  }
+
+  const handleDeleteCourse = async (course) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar curso?',
+      text: `Se eliminará el curso "${course.name}". Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#991b1b',
+      cancelButtonColor: '#d4d4d8',
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!result.isConfirmed) return
+    try {
+      const res = await fetch(`/api/courses/delete/${course._id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Error al eliminar curso')
+      setCoursesBySchool(prev => {
+        const schoolId = course.schoolId
+        return {
+          ...prev,
+          [schoolId]: prev[schoolId]?.filter(c => c._id !== course._id) || []
+        }
+      })
+      Swal.fire('Éxito', 'Curso eliminado correctamente', 'success')
+    } catch (err) {
+      Swal.fire('Error', err.message, 'error')
+    }
   }
 
   return (
@@ -63,8 +107,22 @@ const TeacherDashboard = () => {
                     <ul className="space-y-2">
                       {coursesBySchool[school._id].map((course) => (
                         <li key={course._id || course.name} className="rounded border border-zinc-100 bg-zinc-50 p-3">
-                          <span className="font-medium text-zinc-700">{course.name}</span>
-                          {course.description && <span className="ml-2 text-zinc-500 text-sm">{course.description}</span>}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-medium text-zinc-700">{course.name}</span>
+                              {course.description && <span className="ml-2 text-zinc-500 text-sm">{course.description}</span>}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                className="text-xs text-blue-600 hover:underline"
+                                onClick={() => { setEditingCourse(course); setShowEditModal(true) }}
+                              >Editar</button>
+                              <button
+                                className="text-xs text-red-600 hover:underline"
+                                onClick={() => handleDeleteCourse(course)}
+                              >Eliminar</button>
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -83,6 +141,13 @@ const TeacherDashboard = () => {
         onClose={() => setShowCourseModal(false)}
         onCreated={handleCourseCreated}
         schools={selectedSchool ? [selectedSchool] : schools}
+      />
+      <EditCourseModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onEdited={handleCourseEdited}
+        course={editingCourse}
+        schools={schools}
       />
     </main>
   )

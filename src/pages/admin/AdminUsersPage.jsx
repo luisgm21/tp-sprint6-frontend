@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Swal from 'sweetalert2'
 import { useAppContext } from '../../context/appContext'
 import { useUsers } from '../../hooks/useUsers'
 import UserTable from '../../components/admin/UserTable'
@@ -30,8 +31,9 @@ const AdminUsersPage = () => {
   const handleDeactivate = async (id) => {
     try {
       await deactivateUser(id)
+      Swal.fire('Éxito', 'Usuario desactivado correctamente', 'success')
     } catch (err) {
-      alert(err.message)
+      Swal.fire('Error', err.message, 'error')
     }
   }
 
@@ -39,8 +41,9 @@ const AdminUsersPage = () => {
     try {
       await deleteUser(id)
       setConfirmDelete(null)
+      Swal.fire('Éxito', 'Usuario eliminado correctamente', 'success')
     } catch (err) {
-      alert(err.message)
+      Swal.fire('Error', err.message, 'error')
     }
   }
 
