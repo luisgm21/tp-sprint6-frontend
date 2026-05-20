@@ -14,7 +14,14 @@ const LoginPage = () => {
     setError('')
     try {
       await login(formData.email, formData.password)
-      navigate('/')
+      const savedUser = JSON.parse(localStorage.getItem('authUser') || 'null')
+      if (savedUser?.role === 'admin') {
+        navigate('/admin/users')
+      } else if (savedUser?.role === 'teacher') {
+        navigate('/teacher/dashboard')
+      } else {
+        navigate('/login')
+      }
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {

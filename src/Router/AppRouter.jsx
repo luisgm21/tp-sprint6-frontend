@@ -11,12 +11,19 @@ import { useAppContext } from '../context/appContext'
 import TeacherDashboard from '../pages/teacher/TeacherDashboard'
 
 const AppRouter = () => {
-  const { isAuthenticated } = useAppContext()
+  const { isAuthenticated, authUser } = useAppContext()
+
+  const getHomePath = () => {
+    if (!isAuthenticated) return '/login'
+    if (authUser?.role === 'admin') return '/admin/users'
+    if (authUser?.role === 'teacher') return '/teacher/dashboard'
+    return '/login'
+  }
 
   return (
     <Routes>
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to={getHomePath()} replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
