@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import InputField from './InputField'
+import LoadingSpinner from '../../common/LoadingSpinner'
+import { registerSchema, zodToFieldErrors } from '../../../validators/authValidators'
 
 const ROLES = [
   { value: 'user', label: 'Usuario' },
@@ -24,26 +26,15 @@ const FormRegister = ({ onSubmit, isLoading, error }) => {
     setFieldErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
-  const validate = () => {
-    const errors = {}
-    if (!formData.name.trim()) errors.name = 'El nombre es obligatorio'
-    if (!formData.email) errors.email = 'El email es obligatorio'
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email inválido'
-    if (!formData.password) errors.password = 'La contraseña es obligatoria'
-    else if (formData.password.length < 6) errors.password = 'Mínimo 6 caracteres'
-    if (!formData.confirmPassword) errors.confirmPassword = 'Confirmá la contraseña'
-    else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Las contraseñas no coinciden'
-    if (!formData.role) errors.role = 'Seleccioná un rol'
-    return errors
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault()
-    const errors = validate()
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
+    const result = registerSchema.safeParse(formData)
+
+    if (!result.success) {
+      setFieldErrors(zodToFieldErrors(result.error))
       return
     }
+
     const { confirmPassword, ...submitData } = formData
     onSubmit(submitData)
   }
@@ -126,7 +117,7 @@ const FormRegister = ({ onSubmit, isLoading, error }) => {
         disabled={isLoading}
         className="mt-2 rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isLoading ? 'Registrando...' : 'Crear cuenta'}
+        {isLoading ? <LoadingSpinner inline tone="light" size="sm" text="Registrando..." /> : 'Crear cuenta'}
       </button>
     </form>
   )

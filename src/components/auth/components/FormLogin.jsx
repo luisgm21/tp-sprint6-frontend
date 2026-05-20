@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import InputField from './InputField'
+import LoadingSpinner from '../../common/LoadingSpinner'
+import { loginSchema, zodToFieldErrors } from '../../../validators/authValidators'
 
 const FormLogin = ({ onSubmit, isLoading, error }) => {
   const [formData, setFormData] = useState({ email: '', password: '' })
@@ -11,21 +13,15 @@ const FormLogin = ({ onSubmit, isLoading, error }) => {
     setFieldErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
-  const validate = () => {
-    const errors = {}
-    if (!formData.email) errors.email = 'El email es obligatorio'
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email inválido'
-    if (!formData.password) errors.password = 'La contraseña es obligatoria'
-    return errors
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault()
-    const errors = validate()
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
+    const result = loginSchema.safeParse(formData)
+
+    if (!result.success) {
+      setFieldErrors(zodToFieldErrors(result.error))
       return
     }
+
     onSubmit(formData)
   }
 
@@ -63,7 +59,7 @@ const FormLogin = ({ onSubmit, isLoading, error }) => {
         disabled={isLoading}
         className="mt-2 rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isLoading ? 'Ingresando...' : 'Iniciar sesión'}
+        {isLoading ? <LoadingSpinner inline tone="light" size="sm" text="Ingresando..." /> : 'Iniciar sesión'}
       </button>
     </form>
   )
