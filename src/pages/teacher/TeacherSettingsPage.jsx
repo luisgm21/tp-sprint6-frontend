@@ -20,8 +20,14 @@ const buildEmptyForm = () => ({
   criteria: buildDefaultCriteria(),
 })
 
+const getCreatorId = (template) => {
+  if (!template?.createdBy) return ''
+  if (typeof template.createdBy === 'string') return template.createdBy
+  return template.createdBy._id || template.createdBy.id || ''
+}
+
 const TeacherSettingsPage = () => {
-  const { authUser } = useAppContext()
+  const { authUser, token, logout } = useAppContext()
 
   const [schools, setSchools] = useState([])
   const [selectedSchoolId, setSelectedSchoolId] = useState('')
@@ -41,19 +47,28 @@ const TeacherSettingsPage = () => {
     () => templates.find((template) => template._id === selectedTemplateId) || null,
     [templates, selectedTemplateId]
   )
+  const hasSchools = schools.length > 0
 
   useEffect(() => {
     const fetchSchools = async () => {
       setIsLoadingSchools(true)
       setError('')
       try {
-        const response = await fetch(`${API_URL}/api/schools`)
+        const response = await fetch(`${API_URL}/api/schools/mine`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         const data = await response.json().catch(() => [])
+        if (response.status === 401 || response.status === 403) {
+          logout()
+          return
+        }
         if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las escuelas')
 
         setSchools(data)
         if (data.length > 0) {
           setSelectedSchoolId(data[0]._id)
+        } else {
+          setSelectedSchoolId('')
         }
       } catch (fetchError) {
         setError(fetchError.message)
@@ -63,7 +78,7 @@ const TeacherSettingsPage = () => {
     }
 
     fetchSchools()
-  }, [])
+  }, [token, logout])
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -80,10 +95,14 @@ const TeacherSettingsPage = () => {
         const data = await response.json().catch(() => [])
         if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las plantillas')
 
-        setTemplates(Array.isArray(data) ? data : [])
+        const ownTemplates = (Array.isArray(data) ? data : []).filter(
+          (template) => getCreatorId(template) === authUser?.id
+        )
+
+        setTemplates(ownTemplates)
 
         const savedSelectedTemplateId = localStorage.getItem(`selected-rubric-template:${selectedSchoolId}`) || ''
-        const existsInResult = Array.isArray(data) && data.some((template) => template._id === savedSelectedTemplateId)
+        const existsInResult = ownTemplates.some((template) => template._id === savedSelectedTemplateId)
         setSelectedTemplateId(existsInResult ? savedSelectedTemplateId : '')
       } catch (fetchError) {
         setError(fetchError.message)
@@ -95,7 +114,7 @@ const TeacherSettingsPage = () => {
     fetchTemplates()
     setFormData(buildEmptyForm())
     setIsEditMode(false)
-  }, [selectedSchoolId])
+  }, [selectedSchoolId, authUser?.id])
 
   useEffect(() => {
     if (!selectedTemplate) return
@@ -251,7 +270,10 @@ const TeacherSettingsPage = () => {
 
       const refreshResponse = await fetch(`${API_URL}/api/assessment-templates/school/${selectedSchoolId}?type=rubric`)
       const refreshData = await refreshResponse.json().catch(() => [])
-      setTemplates(Array.isArray(refreshData) ? refreshData : [])
+      const ownTemplates = (Array.isArray(refreshData) ? refreshData : []).filter(
+        (template) => getCreatorId(template) === authUser?.id
+      )
+      setTemplates(ownTemplates)
 
       if (!isEditMode && data?._id) {
         setSelectedTemplateId(data._id)
@@ -273,6 +295,11 @@ const TeacherSettingsPage = () => {
       </header>
 
       <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        {!isLoadingSchools && !hasSchools && (
+          <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Aun no tenes colegios creados. Crea un colegio desde Inicio para poder gestionar plantillas de rubricas.
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-zinc-700" htmlFor="settings-school-select">
@@ -402,6 +429,7 @@ const TeacherSettingsPage = () => {
           <button
             type="button"
             onClick={addCriterion}
+            disabled={!hasSchools}
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Agregar criterio
@@ -409,7 +437,7 @@ const TeacherSettingsPage = () => {
 
           <button
             type="submit"
-            disabled={isSaving || !selectedSchoolId}
+            disabled={isSaving || !selectedSchoolId || !hasSchools}
             className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? 'Guardando...' : isEditMode ? 'Guardar cambios' : 'Crear plantilla'}
