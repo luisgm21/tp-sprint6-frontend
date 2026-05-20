@@ -5,10 +5,14 @@ import ProtectedRoute from '../components/common/ProtectedRoute'
 import LoginPage from '../components/auth/pages/LoginPage'
 import RegisterPage from '../components/auth/pages/RegisterPage'
 import AdminUsersPage from '../pages/admin/AdminUsersPage'
+import NotFoundPage from '../pages/NotFoundPage'
+import { useAppContext } from '../context/appContext'
 
 import TeacherDashboard from '../pages/teacher/TeacherDashboard'
 
 const AppRouter = () => {
+  const { isAuthenticated } = useAppContext()
+
   return (
     <Routes>
       <Route element={<MainLayout />}>
@@ -26,7 +30,7 @@ const AppRouter = () => {
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />} />
       </Route>
     </Routes>
   )
