@@ -3,12 +3,15 @@ import Swal from 'sweetalert2'
 import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
 import CreateCourseModal from '../../components/teacher/CreateCourseModal'
 import EditCourseModal from '../../components/teacher/EditCourseModal'
+import ManageCourseStudentsModal from '../../components/teacher/ManageCourseStudentsModal'
 
 const TeacherDashboard = () => {
   const [showModal, setShowModal] = useState(false)
   const [showCourseModal, setShowCourseModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showStudentsModal, setShowStudentsModal] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
+  const [selectedCourseForStudents, setSelectedCourseForStudents] = useState(null)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
   // Estructura: { [schoolId]: [cursos] }
@@ -114,6 +117,13 @@ const TeacherDashboard = () => {
                             </div>
                             <div className="flex gap-2">
                               <button
+                                className="text-xs text-emerald-700 hover:underline"
+                                onClick={() => {
+                                  setSelectedCourseForStudents(course)
+                                  setShowStudentsModal(true)
+                                }}
+                              >Alumnos</button>
+                              <button
                                 className="text-xs text-blue-600 hover:underline"
                                 onClick={() => { setEditingCourse(course); setShowEditModal(true) }}
                               >Editar</button>
@@ -148,6 +158,11 @@ const TeacherDashboard = () => {
         onEdited={handleCourseEdited}
         course={editingCourse}
         schools={schools}
+      />
+      <ManageCourseStudentsModal
+        open={showStudentsModal}
+        onClose={() => setShowStudentsModal(false)}
+        course={selectedCourseForStudents}
       />
     </main>
   )
