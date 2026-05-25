@@ -4,6 +4,7 @@ import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
 import CreateCourseModal from '../../components/teacher/CreateCourseModal'
 import EditCourseModal from '../../components/teacher/EditCourseModal'
 import ManageCourseStudentsModal from '../../components/teacher/ManageCourseStudentsModal'
+import CourseEvaluationsModal from '../../components/teacher/CourseEvaluationsModal'
 import { useAppContext } from '../../context/appContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -14,8 +15,10 @@ const TeacherDashboard = () => {
   const [showCourseModal, setShowCourseModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showStudentsModal, setShowStudentsModal] = useState(false)
+  const [showEvaluationsModal, setShowEvaluationsModal] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
   const [selectedCourseForStudents, setSelectedCourseForStudents] = useState(null)
+  const [selectedCourseForEvaluations, setSelectedCourseForEvaluations] = useState(null)
   const [selectedSchool, setSelectedSchool] = useState(null)
   const [schools, setSchools] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -200,6 +203,13 @@ const TeacherDashboard = () => {
                                 }}
                               >Alumnos</button>
                               <button
+                                className="text-xs text-violet-700 hover:underline"
+                                onClick={() => {
+                                  setSelectedCourseForEvaluations(course)
+                                  setShowEvaluationsModal(true)
+                                }}
+                              >Evaluaciones</button>
+                              <button
                                 className="text-xs text-blue-600 hover:underline"
                                 onClick={() => { setEditingCourse(course); setShowEditModal(true) }}
                               >Editar</button>
@@ -239,6 +249,11 @@ const TeacherDashboard = () => {
         open={showStudentsModal}
         onClose={() => setShowStudentsModal(false)}
         course={selectedCourseForStudents}
+      />
+      <CourseEvaluationsModal
+        open={showEvaluationsModal}
+        onClose={() => setShowEvaluationsModal(false)}
+        course={selectedCourseForEvaluations}
       />
     </main>
   )
