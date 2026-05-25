@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { createCourseSchema, zodToFieldErrors } from '../../validators/courseValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { useAppContext } from '../../context/appContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const CreateCourseModal = ({ open, onClose, onCreated, schools }) => {
+  const { authUser } = useAppContext()
   const [formData, setFormData] = useState({ name: '', description: '', schoolId: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
@@ -26,12 +28,25 @@ const CreateCourseModal = ({ open, onClose, onCreated, schools }) => {
       setFieldErrors(zodToFieldErrors(result.error))
       return
     }
+
+    const teacherId = authUser?.id || authUser?._id
+    if (!teacherId) {
+      setError('No se pudo identificar al docente autenticado')
+      return
+    }
+
+    const payload = {
+      ...formData,
+      teacherId,
+      year: new Date().getFullYear(),
+    }
+
     setIsLoading(true)
     try {
       const res = await fetch(`${API_URL}/api/courses/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Error al crear curso')
