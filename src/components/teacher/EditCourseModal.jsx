@@ -3,9 +3,29 @@ import { createCourseSchema, zodToFieldErrors } from '../../validators/courseVal
 import LoadingSpinner from '../common/LoadingSpinner'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const MONTH_OPTIONS = [
+  { value: 1, label: 'Enero' },
+  { value: 2, label: 'Febrero' },
+  { value: 3, label: 'Marzo' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Mayo' },
+  { value: 6, label: 'Junio' },
+  { value: 7, label: 'Julio' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Septiembre' },
+  { value: 10, label: 'Octubre' },
+  { value: 11, label: 'Noviembre' },
+  { value: 12, label: 'Diciembre' },
+]
 
 const EditCourseModal = ({ open, onClose, onEdited, course, schools }) => {
-  const [formData, setFormData] = useState({ name: '', description: '', schoolId: '' })
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    schoolId: '',
+    startMonth: '1',
+    endMonth: '12',
+  })
   const [fieldErrors, setFieldErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -16,6 +36,8 @@ const EditCourseModal = ({ open, onClose, onEdited, course, schools }) => {
         name: course.name || '',
         description: course.description || '',
         schoolId: course.schoolId || '',
+        startMonth: String(Number(course.startMonth) || 1),
+        endMonth: String(Number(course.endMonth) || 12),
       })
     }
   }, [course, open])
@@ -41,7 +63,11 @@ const EditCourseModal = ({ open, onClose, onEdited, course, schools }) => {
       const res = await fetch(`${API_URL}/api/courses/update/${course._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          startMonth: Number(formData.startMonth),
+          endMonth: Number(formData.endMonth),
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Error al editar curso')
@@ -108,6 +134,38 @@ const EditCourseModal = ({ open, onClose, onEdited, course, schools }) => {
               className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
               rows={3}
             />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="startMonth" className="text-sm font-medium text-zinc-700">Inicio de clases</label>
+              <select
+                id="startMonth"
+                name="startMonth"
+                value={formData.startMonth}
+                onChange={handleChange}
+                className={`mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 ${fieldErrors.startMonth ? 'border-red-400 bg-red-50' : 'border-zinc-300 bg-white'}`}
+              >
+                {MONTH_OPTIONS.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+              {fieldErrors.startMonth && <p className="text-xs text-red-500 mt-1">{fieldErrors.startMonth}</p>}
+            </div>
+            <div>
+              <label htmlFor="endMonth" className="text-sm font-medium text-zinc-700">Fin de clases</label>
+              <select
+                id="endMonth"
+                name="endMonth"
+                value={formData.endMonth}
+                onChange={handleChange}
+                className={`mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 ${fieldErrors.endMonth ? 'border-red-400 bg-red-50' : 'border-zinc-300 bg-white'}`}
+              >
+                {MONTH_OPTIONS.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+              {fieldErrors.endMonth && <p className="text-xs text-red-500 mt-1">{fieldErrors.endMonth}</p>}
+            </div>
           </div>
           {error && <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>}
           <div className="mt-2 flex justify-end gap-2">
