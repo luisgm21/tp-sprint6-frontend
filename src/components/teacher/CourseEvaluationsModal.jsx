@@ -42,7 +42,7 @@ const getStudentName = (student) => {
   return `${student.lastName || ''}, ${student.firstName || ''}`.trim().replace(/^,\s*/, '') || student.documentNumber || 'Alumno'
 }
 
-const emptyNumericSlot = () => ({ id: null, score: '' })
+const emptyNumericSlot = () => ({ id: null, score: '', isDirty: false })
 
 const getTodayLocalDateInput = () => {
   const now = new Date()
@@ -116,7 +116,7 @@ const buildNumericCells = (evaluations, enrollments, year, monthsRange) => {
       const key = `${enrollment._id}-${month.index}`
       const slots = (grouped[key] || [])
         .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .map((item) => ({ id: item.id, score: String(item.score ?? '') }))
+        .map((item) => ({ id: item.id, score: String(item.score ?? ''), isDirty: false }))
 
       while (slots.length < MIN_NUMERIC_SLOTS) {
         slots.push(emptyNumericSlot())
@@ -332,7 +332,11 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
 
     setNumericCells((prev) => {
       const currentSlots = prev[key] || Array.from({ length: MIN_NUMERIC_SLOTS }, () => emptyNumericSlot())
-      const nextSlots = currentSlots.map((slot, index) => (index === slotIndex ? { ...slot, score: value } : slot))
+      const nextSlots = currentSlots.map((slot, index) => (
+        index === slotIndex
+          ? { ...slot, score: value, isDirty: true }
+          : slot
+      ))
       return { ...prev, [key]: nextSlots }
     })
 
@@ -394,11 +398,6 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
     try {
       let pendingActions = 0
       const deleteQueue = [...new Set(numericDeletedIds)]
-      const parsedLoadDate = parseDateInputAsLocalDate(numericLoadDate)
-      const baseDay = parsedLoadDate && !Number.isNaN(parsedLoadDate.getTime())
-        ? Math.min(Math.max(parsedLoadDate.getDate(), 1), 28)
-        : 1
-
       for (const [key, slots] of Object.entries(numericCells)) {
         const [enrollmentId, monthRaw] = key.split('-')
         const monthIndex = Number(monthRaw)
@@ -410,30 +409,24 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
         for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
           const slot = slots[slotIndex]
           const trimmed = String(slot?.score || '').trim()
+          const isDirty = Boolean(slot?.isDirty)
 
           if (!trimmed) {
-            if (slot?.id) deleteQueue.push(slot.id)
+            if (slot?.id && isDirty) deleteQueue.push(slot.id)
             continue
           }
+
+          if (!isDirty) continue
 
           const score = Number(trimmed)
           if (Number.isNaN(score) || score < 1 || score > 10) {
             throw new Error('Las notas numéricas deben estar entre 1 y 10')
           }
-
-          const day = baseDay
-          const date = new Date(courseYear, monthIndex, day)
+          const date = numericLoadDate
 
           if (slot?.id) {
             const original = numericEvaluationsById[slot.id]
-            const originalDate = original?.date ? new Date(original.date) : null
-            const unchanged =
-              original &&
-              Number(original.score) === score &&
-              originalDate &&
-              originalDate.getFullYear() === date.getFullYear() &&
-              originalDate.getMonth() === date.getMonth() &&
-              originalDate.getDate() === date.getDate()
+            const unchanged = original && Number(original.score) === score
 
             if (unchanged) continue
 
