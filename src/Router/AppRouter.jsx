@@ -10,6 +10,7 @@ import { useAppContext } from '../context/appContext'
 
 import TeacherDashboard from '../pages/teacher/TeacherDashboard'
 import TeacherSettingsPage from '../pages/teacher/TeacherSettingsPage'
+import TeacherGradebookPage from '../pages/teacher/TeacherGradebookPage'
 
 const AppRouter = () => {
   const { isAuthenticated, authUser } = useAppContext()
@@ -37,6 +38,7 @@ const AppRouter = () => {
         <Route element={<ProtectedRoute requiredRole="teacher" />}>
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/teacher/settings" element={<TeacherSettingsPage />} />
+          <Route path="/teacher/courses/:courseId/gradebook" element={<TeacherGradebookPage />} />
         </Route>
 
         <Route path="*" element={isAuthenticated ? <NotFoundPage /> : <Navigate to="/login" replace />} />

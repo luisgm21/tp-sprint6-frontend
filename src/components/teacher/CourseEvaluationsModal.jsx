@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
 import LoadingSpinner from '../common/LoadingSpinner'
 import { useAppContext } from '../../context/appContext'
 
@@ -103,6 +104,7 @@ const buildNumericCells = (evaluations, enrollments, year, monthsRange) => {
 
 const CourseEvaluationsModal = ({ open, onClose, course }) => {
   const { authUser } = useAppContext()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(TAB_NUMERIC)
 
   const [enrollments, setEnrollments] = useState([])
@@ -114,13 +116,12 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
   const [loadError, setLoadError] = useState('')
 
   const [selectedMonth, setSelectedMonth] = useState(0)
+  const [numericLoadDate, setNumericLoadDate] = useState(new Date().toISOString().slice(0, 10))
   const [numericCells, setNumericCells] = useState({})
   const [numericDeletedIds, setNumericDeletedIds] = useState([])
   const [numericMessage, setNumericMessage] = useState('')
   const [numericError, setNumericError] = useState('')
   const [isSavingNumeric, setIsSavingNumeric] = useState(false)
-  const [numericNoteDrafts, setNumericNoteDrafts] = useState({})
-  const [savingNumericNoteId, setSavingNumericNoteId] = useState('')
 
   const [rubricForm, setRubricForm] = useState({
     enrollmentId: '',
@@ -182,51 +183,20 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
     [enrollments]
   )
 
-  const enrollmentStudentNameById = useMemo(() => {
-    const map = {}
-    enrollments.forEach((enrollment) => {
-      map[enrollment._id] = getStudentName(enrollment.studentId)
-    })
-    return map
-  }, [enrollments])
-
-  const numericNotesHistory = useMemo(() => {
-    return courseEvaluations
-      .filter((evaluation) => !evaluation?.isRecovery && evaluation?.score !== undefined && evaluation?.score !== null)
-      .map((evaluation) => {
-        const date = evaluation.date ? new Date(evaluation.date) : null
-        const monthIndex = date && !Number.isNaN(date.getTime()) ? date.getMonth() : -1
-        const enrollmentId = getEntityId(evaluation.enrollmentId)
-
-        return {
-          id: evaluation._id,
-          enrollmentId,
-          studentName: enrollmentStudentNameById[enrollmentId] || 'Alumno',
-          score: evaluation.score,
-          monthLabel: monthIndex >= 0 ? MONTHS[monthIndex].label : '-',
-          dateInput: date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : '',
-          description: String(evaluation.comments || ''),
-        }
-      })
-      .sort((a, b) => b.dateInput.localeCompare(a.dateInput))
-  }, [courseEvaluations, enrollmentStudentNameById])
-
-  useEffect(() => {
-    const drafts = {}
-    numericNotesHistory.forEach((note) => {
-      drafts[note.id] = {
-        date: note.dateInput,
-        description: note.description,
-      }
-    })
-    setNumericNoteDrafts(drafts)
-  }, [numericNotesHistory])
-
   useEffect(() => {
     if (classMonths.length > 0) {
       setSelectedMonth(classMonths[0].index)
     }
   }, [classMonths])
+
+  useEffect(() => {
+    setNumericLoadDate((prev) => {
+      const previousDate = prev ? new Date(prev) : new Date()
+      const safeDay = !Number.isNaN(previousDate.getTime()) ? previousDate.getDate() : 1
+      const nextDate = new Date(courseYear, selectedMonth, Math.min(Math.max(safeDay, 1), 28))
+      return nextDate.toISOString().slice(0, 10)
+    })
+  }, [courseYear, selectedMonth])
 
   useEffect(() => {
     if (!open || !course?._id) return
@@ -397,6 +367,10 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
     try {
       let pendingActions = 0
       const deleteQueue = [...new Set(numericDeletedIds)]
+      const parsedLoadDate = numericLoadDate ? new Date(numericLoadDate) : null
+      const baseDay = parsedLoadDate && !Number.isNaN(parsedLoadDate.getTime())
+        ? Math.min(Math.max(parsedLoadDate.getDate(), 1), 28)
+        : 1
 
       for (const [key, slots] of Object.entries(numericCells)) {
         const [enrollmentId, monthRaw] = key.split('-')
@@ -420,7 +394,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
             throw new Error('Las notas numéricas deben estar entre 1 y 10')
           }
 
-          const day = Math.min(slotIndex + 1, 28)
+          const day = Math.min(baseDay + slotIndex, 28)
           const date = new Date(courseYear, monthIndex, day)
 
           if (slot?.id) {
@@ -495,58 +469,6 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
       setNumericError(error.message || 'No se pudo guardar la planilla mensual')
     } finally {
       setIsSavingNumeric(false)
-    }
-  }
-
-  const updateNumericNoteDraft = (noteId, field, value) => {
-    setNumericNoteDrafts((prev) => ({
-      ...prev,
-      [noteId]: {
-        date: prev[noteId]?.date || '',
-        description: prev[noteId]?.description || '',
-        [field]: value,
-      },
-    }))
-    setNumericMessage('')
-    setNumericError('')
-  }
-
-  const saveNumericNoteMetadata = async (noteId) => {
-    const draft = numericNoteDrafts[noteId]
-    if (!draft?.date) {
-      setNumericError('Cada nota numérica debe tener una fecha válida')
-      return
-    }
-
-    setSavingNumericNoteId(noteId)
-    setNumericMessage('')
-    setNumericError('')
-
-    try {
-      const response = await fetch(`${API_URL}/api/evaluations/update/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: new Date(draft.date),
-          comments: String(draft.description || '').trim(),
-        }),
-      })
-
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error || 'No se pudo actualizar la nota numérica')
-
-      const evaluationsRes = await fetch(`${API_URL}/api/evaluations/course/${course._id}`)
-      const evaluationsData = await evaluationsRes.json().catch(() => [])
-      if (!evaluationsRes.ok) throw new Error(evaluationsData.error || 'No se pudieron refrescar las evaluaciones')
-
-      const refreshedEvaluations = Array.isArray(evaluationsData) ? evaluationsData : []
-      setCourseEvaluations(refreshedEvaluations)
-      setNumericCells(buildNumericCells(refreshedEvaluations, enrollments, courseYear, classMonths))
-      setNumericMessage('Fecha y descripción actualizadas correctamente')
-    } catch (error) {
-      setNumericError(error.message || 'No se pudo actualizar la nota numérica')
-    } finally {
-      setSavingNumericNoteId('')
     }
   }
 
@@ -689,44 +611,66 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
 
     return (
       <div className="space-y-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-48">
-            <label htmlFor="selectedMonth" className="text-xs font-medium text-zinc-600">Mes de carga</label>
-            <select
-              id="selectedMonth"
-              value={selectedMonth}
-              onChange={(event) => setSelectedMonth(Number(event.target.value))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-48">
+              <label htmlFor="selectedMonth" className="text-xs font-medium text-zinc-600">Mes de carga</label>
+              <select
+                id="selectedMonth"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(Number(event.target.value))}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+              >
+                {classMonths.map((month) => (
+                  <option key={month.index} value={month.index}>{month.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-48">
+              <label htmlFor="numericLoadDate" className="text-xs font-medium text-zinc-600">Fecha de carga</label>
+              <input
+                id="numericLoadDate"
+                type="date"
+                value={numericLoadDate}
+                onChange={(event) => setNumericLoadDate(event.target.value)}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={saveNumericSheet}
+              disabled={isSavingNumeric}
+              className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {classMonths.map((month) => (
-                <option key={month.index} value={month.index}>{month.label}</option>
-              ))}
-            </select>
+              {isSavingNumeric ? <LoadingSpinner inline tone="light" size="sm" text="Guardando..." /> : 'Guardar carga rápida'}
+            </button>
           </div>
 
           <button
             type="button"
-            onClick={saveNumericSheet}
-            disabled={isSavingNumeric}
-            className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              onClose?.()
+              navigate(`/teacher/courses/${course?._id}/gradebook`)
+            }}
+            className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
           >
-            {isSavingNumeric ? <LoadingSpinner inline tone="light" size="sm" text="Guardando..." /> : 'Guardar notas'}
+            Abrir planilla completa
           </button>
         </div>
 
-        <p className="text-xs text-zinc-500">
-          Cargá notas para el mes seleccionado. Podés agregar varias notas por alumno con el botón +.
-        </p>
+        <p className="text-xs text-zinc-500">Vista de carga rápida. Para edición extensa usá la planilla completa.</p>
 
         {numericError && <p className="text-sm text-red-600">{numericError}</p>}
         {numericMessage && <p className="text-sm text-emerald-600">{numericMessage}</p>}
 
-        <div className="max-h-105 overflow-auto rounded-lg border border-zinc-200">
+        <div className="max-h-96 overflow-auto rounded-lg border border-zinc-200">
           <table className="min-w-full w-full border-collapse text-sm">
             <thead className="sticky top-0 bg-zinc-50">
               <tr>
                 <th className="border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold text-zinc-600">Alumno</th>
-                <th className="border-b border-zinc-200 px-2 py-2 text-left text-xs font-semibold text-zinc-600">Notas del mes</th>
+                <th className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">Nota rápida</th>
                 <th className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">Promedio mes</th>
               </tr>
             </thead>
@@ -734,43 +678,22 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
               {enrollments.map((enrollment) => {
                 const slots = getSlots(enrollment._id, selectedMonth)
                 const monthAverage = getMonthAverageForEnrollment(enrollment._id, selectedMonth)
+                const firstSlot = slots[0] || emptyNumericSlot()
 
                 return (
                   <tr key={enrollment._id}>
                     <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700">{getStudentName(enrollment.studentId)}</td>
-                    <td className="border-b border-zinc-100 px-2 py-2">
-                      <div className="flex flex-wrap items-center gap-1">
-                        {slots.map((slot, slotIndex) => (
-                          <div key={`${enrollment._id}-${selectedMonth}-${slotIndex}`} className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              min="1"
-                              max="10"
-                              step="0.01"
-                              value={slot.score}
-                              onChange={(event) => setNumericSlotScore(enrollment._id, selectedMonth, slotIndex, event.target.value)}
-                              className="w-12 rounded border border-zinc-300 px-1 py-0.5 text-center text-[11px] outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-200"
-                              placeholder="-"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeNumericSlot(enrollment._id, selectedMonth, slotIndex)}
-                              className="h-5 w-5 rounded border border-zinc-300 text-[10px] text-zinc-600 hover:bg-zinc-100"
-                              title="Quitar nota"
-                            >
-                              x
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addNumericSlot(enrollment._id, selectedMonth)}
-                          className="h-5 w-5 rounded border border-zinc-300 text-[11px] text-zinc-600 hover:bg-zinc-100"
-                          title="Agregar nota"
-                        >
-                          +
-                        </button>
-                      </div>
+                    <td className="border-b border-zinc-100 px-2 py-2 text-center">
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        step="0.01"
+                        value={firstSlot.score}
+                        onChange={(event) => setNumericSlotScore(enrollment._id, selectedMonth, 0, event.target.value)}
+                        className="w-20 rounded border border-zinc-300 px-2 py-1 text-center text-xs outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-200"
+                        placeholder="-"
+                      />
                     </td>
                     <td className="border-b border-zinc-100 px-2 py-2 text-center text-xs font-medium text-zinc-700">
                       {monthAverage === null ? '-' : monthAverage.toFixed(2)}
@@ -782,103 +705,6 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           </table>
         </div>
 
-        <div className="rounded-lg border border-zinc-200">
-          <div className="border-b border-zinc-200 bg-zinc-50 px-3 py-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Resumen general de promedios mensuales</h4>
-          </div>
-          <div className="max-h-80 overflow-auto">
-            <table className="min-w-230 w-full border-collapse text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr>
-                  <th className="border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold text-zinc-600">Alumno</th>
-                  {classMonths.map((month) => (
-                    <th key={`summary-${month.index}`} className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">{month.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {enrollments.map((enrollment) => (
-                  <tr key={`summary-row-${enrollment._id}`}>
-                    <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700">{getStudentName(enrollment.studentId)}</td>
-                    {classMonths.map((month) => {
-                      const average = getMonthAverageForEnrollment(enrollment._id, month.index)
-                      return (
-                        <td key={`summary-${enrollment._id}-${month.index}`} className="border-b border-zinc-100 px-2 py-2 text-center text-xs text-zinc-700">
-                          {average === null ? '-' : average.toFixed(2)}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-zinc-200">
-          <div className="border-b border-zinc-200 bg-zinc-50 px-3 py-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Notas numéricas cargadas</h4>
-          </div>
-          <div className="max-h-80 overflow-auto">
-            {numericNotesHistory.length === 0 ? (
-              <p className="px-3 py-3 text-sm text-zinc-500">Aún no hay notas numéricas registradas.</p>
-            ) : (
-              <table className="min-w-230 w-full border-collapse text-sm">
-                <thead className="sticky top-0 bg-white">
-                  <tr>
-                    <th className="border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold text-zinc-600">Alumno</th>
-                    <th className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">Mes</th>
-                    <th className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">Nota</th>
-                    <th className="border-b border-zinc-200 px-2 py-2 text-left text-xs font-semibold text-zinc-600">Fecha</th>
-                    <th className="border-b border-zinc-200 px-2 py-2 text-left text-xs font-semibold text-zinc-600">Descripción</th>
-                    <th className="border-b border-zinc-200 px-2 py-2 text-center text-xs font-semibold text-zinc-600">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {numericNotesHistory.map((note) => {
-                    const draft = numericNoteDrafts[note.id] || { date: note.dateInput, description: note.description }
-                    const isSaving = savingNumericNoteId === note.id
-
-                    return (
-                      <tr key={note.id}>
-                        <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700">{note.studentName}</td>
-                        <td className="border-b border-zinc-100 px-2 py-2 text-center text-xs text-zinc-700">{note.monthLabel}</td>
-                        <td className="border-b border-zinc-100 px-2 py-2 text-center text-xs font-medium text-zinc-700">{Number(note.score).toFixed(2)}</td>
-                        <td className="border-b border-zinc-100 px-2 py-2">
-                          <input
-                            type="date"
-                            value={draft.date}
-                            onChange={(event) => updateNumericNoteDraft(note.id, 'date', event.target.value)}
-                            className="w-full rounded border border-zinc-300 px-2 py-1 text-xs outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-200"
-                          />
-                        </td>
-                        <td className="border-b border-zinc-100 px-2 py-2">
-                          <input
-                            type="text"
-                            value={draft.description}
-                            onChange={(event) => updateNumericNoteDraft(note.id, 'description', event.target.value)}
-                            placeholder="Descripción de la nota"
-                            className="w-full rounded border border-zinc-300 px-2 py-1 text-xs outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-200"
-                          />
-                        </td>
-                        <td className="border-b border-zinc-100 px-2 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => saveNumericNoteMetadata(note.id)}
-                            disabled={isSaving}
-                            className="rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSaving ? 'Guardando...' : 'Guardar'}
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
       </div>
     )
   }

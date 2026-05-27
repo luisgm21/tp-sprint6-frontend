@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import Swal from 'sweetalert2'
 import CreateSchoolModal from '../../components/teacher/CreateSchoolModal'
 import CreateCourseModal from '../../components/teacher/CreateCourseModal'
@@ -10,6 +11,7 @@ import { useAppContext } from '../../context/appContext'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const TeacherDashboard = () => {
+  const navigate = useNavigate()
   const { token, authUser, logout } = useAppContext()
   const [showModal, setShowModal] = useState(false)
   const [showCourseModal, setShowCourseModal] = useState(false)
@@ -209,6 +211,10 @@ const TeacherDashboard = () => {
                                   setShowEvaluationsModal(true)
                                 }}
                               >Evaluaciones</button>
+                              <button
+                                className="text-xs text-amber-700 hover:underline"
+                                onClick={() => navigate(`/teacher/courses/${course._id}/gradebook`)}
+                              >Planilla</button>
                               <button
                                 className="text-xs text-blue-600 hover:underline"
                                 onClick={() => { setEditingCourse(course); setShowEditModal(true) }}
