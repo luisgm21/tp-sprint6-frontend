@@ -35,6 +35,33 @@ const getStudentName = (student) => {
 
 const emptyNumericSlot = () => ({ id: null, score: '' })
 
+const getTodayLocalDateInput = () => {
+  const now = new Date()
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
+}
+
+const parseDateInputAsLocalDate = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const localDate = new Date(year, month - 1, day)
+
+  if (
+    Number.isNaN(localDate.getTime())
+    || localDate.getFullYear() !== year
+    || localDate.getMonth() !== month - 1
+    || localDate.getDate() !== day
+  ) {
+    return null
+  }
+
+  return localDate
+}
+
 const normalizeMonthRange = (startMonth, endMonth) => {
   const start = Number(startMonth)
   const end = Number(endMonth)
@@ -106,7 +133,7 @@ const TeacherGradebookPage = () => {
   const [loadError, setLoadError] = useState('')
 
   const [selectedMonth, setSelectedMonth] = useState(0)
-  const [numericLoadDate, setNumericLoadDate] = useState(new Date().toISOString().slice(0, 10))
+  const [numericLoadDate, setNumericLoadDate] = useState(getTodayLocalDateInput())
   const [studentSearch, setStudentSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [minAverageFilter, setMinAverageFilter] = useState('')
@@ -382,7 +409,7 @@ const TeacherGradebookPage = () => {
     try {
       let pendingActions = 0
       const deleteQueue = [...new Set(numericDeletedIds)]
-      const parsedLoadDate = numericLoadDate ? new Date(numericLoadDate) : null
+      const parsedLoadDate = parseDateInputAsLocalDate(numericLoadDate)
       const baseDay = parsedLoadDate && !Number.isNaN(parsedLoadDate.getTime())
         ? Math.min(Math.max(parsedLoadDate.getDate(), 1), 28)
         : 1
@@ -409,7 +436,7 @@ const TeacherGradebookPage = () => {
             throw new Error('Las notas numéricas deben estar entre 1 y 10')
           }
 
-          const day = Math.min(baseDay + slotIndex, 28)
+          const day = baseDay
           const date = new Date(courseYear, monthIndex, day)
 
           if (slot?.id) {
@@ -516,7 +543,7 @@ const TeacherGradebookPage = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: new Date(draft.date),
+          date: parseDateInputAsLocalDate(draft.date),
           comments: String(draft.description || '').trim(),
         }),
       })

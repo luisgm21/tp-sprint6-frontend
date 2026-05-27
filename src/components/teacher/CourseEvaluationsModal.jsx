@@ -44,6 +44,33 @@ const getStudentName = (student) => {
 
 const emptyNumericSlot = () => ({ id: null, score: '' })
 
+const getTodayLocalDateInput = () => {
+  const now = new Date()
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
+}
+
+const parseDateInputAsLocalDate = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const localDate = new Date(year, month - 1, day)
+
+  if (
+    Number.isNaN(localDate.getTime())
+    || localDate.getFullYear() !== year
+    || localDate.getMonth() !== month - 1
+    || localDate.getDate() !== day
+  ) {
+    return null
+  }
+
+  return localDate
+}
+
 const normalizeMonthRange = (startMonth, endMonth) => {
   const start = Number(startMonth)
   const end = Number(endMonth)
@@ -116,7 +143,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
   const [loadError, setLoadError] = useState('')
 
   const [selectedMonth, setSelectedMonth] = useState(0)
-  const [numericLoadDate, setNumericLoadDate] = useState(new Date().toISOString().slice(0, 10))
+  const [numericLoadDate, setNumericLoadDate] = useState(getTodayLocalDateInput())
   const [numericCells, setNumericCells] = useState({})
   const [numericDeletedIds, setNumericDeletedIds] = useState([])
   const [numericMessage, setNumericMessage] = useState('')
@@ -126,7 +153,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
   const [rubricForm, setRubricForm] = useState({
     enrollmentId: '',
     templateId: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: getTodayLocalDateInput(),
     comments: '',
   })
   const [rubricSelections, setRubricSelections] = useState({})
@@ -137,7 +164,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
   const [checklistForm, setChecklistForm] = useState({
     enrollmentId: '',
     templateId: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: getTodayLocalDateInput(),
     comments: '',
   })
   const [checklistSelections, setChecklistSelections] = useState({})
@@ -367,7 +394,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
     try {
       let pendingActions = 0
       const deleteQueue = [...new Set(numericDeletedIds)]
-      const parsedLoadDate = numericLoadDate ? new Date(numericLoadDate) : null
+      const parsedLoadDate = parseDateInputAsLocalDate(numericLoadDate)
       const baseDay = parsedLoadDate && !Number.isNaN(parsedLoadDate.getTime())
         ? Math.min(Math.max(parsedLoadDate.getDate(), 1), 28)
         : 1
@@ -394,7 +421,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
             throw new Error('Las notas numéricas deben estar entre 1 y 10')
           }
 
-          const day = Math.min(baseDay + slotIndex, 28)
+          const day = baseDay
           const date = new Date(courseYear, monthIndex, day)
 
           if (slot?.id) {
@@ -522,7 +549,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           studentId,
           templateId: rubricForm.templateId,
           name: rubricTemplate?.name || 'Evaluación por rúbrica',
-          date: new Date(rubricForm.date),
+          date: parseDateInputAsLocalDate(rubricForm.date),
           rubricResults,
           comments: rubricForm.comments.trim(),
           isRecovery: false,
@@ -585,7 +612,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           studentId,
           templateId: checklistForm.templateId,
           name: checklistTemplate?.name || 'Evaluación checklist',
-          date: new Date(checklistForm.date),
+          date: parseDateInputAsLocalDate(checklistForm.date),
           checklistResults,
           comments: checklistForm.comments.trim(),
           isRecovery: false,
