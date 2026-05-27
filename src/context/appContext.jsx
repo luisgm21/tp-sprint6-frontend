@@ -4,6 +4,14 @@ const AppContext = createContext()
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
+const normalizeAuthUser = (user) => {
+  if (!user) return null
+  return {
+    ...user,
+    id: user.id || user._id,
+  }
+}
+
 export const AppProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -20,7 +28,7 @@ export const AppProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(() => {
     try {
       const saved = localStorage.getItem('authUser')
-      return saved ? JSON.parse(saved) : null
+      return saved ? normalizeAuthUser(JSON.parse(saved)) : null
     } catch {
       return null
     }
@@ -48,10 +56,18 @@ export const AppProvider = ({ children }) => {
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Credenciales inválidas')
+    const normalizedUser = normalizeAuthUser(data.user)
     localStorage.setItem('token', data.token)
-    localStorage.setItem('authUser', JSON.stringify(data.user))
+    localStorage.setItem('authUser', JSON.stringify(normalizedUser))
     setToken(data.token)
-    setAuthUser(data.user)
+    setAuthUser(normalizedUser)
+  }
+
+  const updateAuthUser = (userData) => {
+    const normalizedUser = normalizeAuthUser(userData)
+    if (!normalizedUser) return
+    localStorage.setItem('authUser', JSON.stringify(normalizedUser))
+    setAuthUser(normalizedUser)
   }
 
   const logout = () => {
@@ -65,6 +81,7 @@ export const AppProvider = ({ children }) => {
     isDarkMode,
     toggleDarkMode,
     authUser,
+    updateAuthUser,
     token,
     isAuthenticated: !!token,
     login,

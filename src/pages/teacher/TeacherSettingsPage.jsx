@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/appContext'
+import { updateUserSchema, zodToFieldErrors } from '../../validators/authValidators'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -255,7 +256,14 @@ const RubricSection = ({
 }
 
 const TeacherSettingsPage = () => {
-  const { authUser, token, logout } = useAppContext()
+  const { authUser, token, logout, updateAuthUser } = useAppContext()
+  const [activeTab, setActiveTab] = useState('profile')
+  const [activeRubricTab, setActiveRubricTab] = useState('general')
+  const [profileData, setProfileData] = useState({ name: '', email: '' })
+  const [profileFieldErrors, setProfileFieldErrors] = useState({})
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   const [schools, setSchools] = useState([])
   const [selectedSchoolId, setSelectedSchoolId] = useState('')
@@ -281,6 +289,7 @@ const TeacherSettingsPage = () => {
   const [schoolSuccess, setSchoolSuccess] = useState('')
 
   const hasSchools = schools.length > 0
+  const authUserId = authUser?.id || authUser?._id || ''
 
   const selectedSchool = useMemo(
     () => schools.find((school) => school._id === selectedSchoolId) || null,
@@ -299,9 +308,16 @@ const TeacherSettingsPage = () => {
 
   const filterOwnTemplates = (templates) => {
     return (Array.isArray(templates) ? templates : []).filter(
-      (template) => getCreatorId(template) === authUser?.id
+      (template) => getCreatorId(template) === authUserId
     )
   }
+
+  useEffect(() => {
+    setProfileData({
+      name: authUser?.name || '',
+      email: authUser?.email || '',
+    })
+  }, [authUser?.name, authUser?.email])
 
   const fetchSchools = async () => {
     setIsLoadingSchools(true)
@@ -537,101 +553,296 @@ const TeacherSettingsPage = () => {
     }
   }
 
+  const handleProfileChange = (event) => {
+    const { name, value } = event.target
+    setProfileData((prev) => ({ ...prev, [name]: value }))
+    setProfileFieldErrors((prev) => ({ ...prev, [name]: '' }))
+    setProfileError('')
+    setProfileSuccess('')
+  }
+
+  const handleSaveProfile = async (event) => {
+    event.preventDefault()
+    setProfileError('')
+    setProfileSuccess('')
+
+    const payload = {
+      name: profileData.name,
+      email: profileData.email,
+      role: authUser?.role || 'teacher',
+    }
+
+    const validationResult = updateUserSchema.safeParse(payload)
+    if (!validationResult.success) {
+      setProfileFieldErrors(zodToFieldErrors(validationResult.error))
+      return
+    }
+
+    if (!authUserId) {
+      setProfileError('No se pudo identificar al usuario logueado')
+      return
+    }
+
+    setIsSavingProfile(true)
+    try {
+      const response = await fetch(`${API_URL}/api/users/update/${authUserId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: payload.name.trim(),
+          email: payload.email.trim(),
+          role: payload.role,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (response.status === 401 || response.status === 403) {
+        logout()
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudieron actualizar tus datos')
+      }
+
+      updateAuthUser({
+        ...authUser,
+        name: data?.name || payload.name.trim(),
+        email: data?.email || payload.email.trim(),
+      })
+
+      setProfileSuccess('Tus datos se actualizaron correctamente')
+      setProfileFieldErrors({})
+    } catch (error) {
+      setProfileError(error.message)
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-zinc-900">Configuracion</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Gestiona una seccion de rubricas generales y una seccion por cada colegio para modificar sus rubricas.
+          Gestiona tu perfil docente y tus plantillas de rubrica desde pestañas separadas.
         </p>
       </header>
 
-      {schoolsError && (
-        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {schoolsError}
-        </p>
-      )}
-
-      {!isLoadingSchools && !hasSchools && (
-        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          Aun no tenes colegios creados. Crea un colegio desde Inicio para habilitar la seccion por colegio.
-        </p>
-      )}
+      <div className="mb-5 inline-flex w-full max-w-xl rounded-lg border border-zinc-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Pestañas de configuración">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'profile'}
+          onClick={() => setActiveTab('profile')}
+          className={`w-full rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'profile' ? 'bg-zinc-800 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
+        >
+          Mis datos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'rubrics'}
+          onClick={() => setActiveTab('rubrics')}
+          className={`w-full rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'rubrics' ? 'bg-zinc-800 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
+        >
+          Rubricas
+        </button>
+      </div>
 
       <div className="space-y-5">
-        <RubricSection
-          title="Rubricas generales"
-          subtitle="Estas plantillas no dependen de un colegio en particular."
-          templates={generalTemplates}
-          selectedTemplateId={generalSelectedTemplateId}
-          setSelectedTemplateId={setGeneralSelectedTemplateId}
-          formData={generalFormData}
-          setFormData={setGeneralFormData}
-          isEditMode={generalIsEditMode}
-          setIsEditMode={setGeneralIsEditMode}
-          isLoading={generalLoading}
-          isSaving={generalSaving}
-          error={generalError}
-          success={generalSuccess}
-          onSave={handleSaveGeneral}
-          disableEdition={false}
-          emptyTemplatesMessage="No tienes rubricas generales creadas."
-          sectionKey="general"
-        />
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        {activeTab === 'profile' && (
+          <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm" role="tabpanel" aria-label="Pestaña Mis datos">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-zinc-900">Rubricas por colegio</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">Mis datos</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Selecciona un colegio y modifica sus plantillas de rubrica.
+              Actualiza tu nombre y correo electronico para mantener tu perfil al dia.
             </p>
           </div>
 
-          <div className="mb-4">
-            <label className="text-sm font-medium text-zinc-700" htmlFor="settings-school-select">
-              Colegio
-            </label>
-            <select
-              id="settings-school-select"
-              value={selectedSchoolId}
-              onChange={(event) => setSelectedSchoolId(event.target.value)}
-              disabled={isLoadingSchools || !hasSchools}
-              className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            >
-              {isLoadingSchools ? (
-                <option value="">Cargando colegios...</option>
-              ) : !hasSchools ? (
-                <option value="">Sin colegios creados</option>
-              ) : (
-                schools.map((school) => (
-                  <option key={school._id} value={school._id}>
-                    {school.name}
-                  </option>
-                ))
+          <form onSubmit={handleSaveProfile} className="space-y-4" noValidate>
+            <div>
+              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-name">
+                Nombre
+              </label>
+              <input
+                id="profile-name"
+                name="name"
+                type="text"
+                value={profileData.name}
+                onChange={handleProfileChange}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                disabled={isSavingProfile}
+              />
+              {profileFieldErrors.name && (
+                <p className="mt-1 text-xs text-red-600">{profileFieldErrors.name}</p>
               )}
-            </select>
-          </div>
+            </div>
 
-          <RubricSection
-            title={selectedSchool ? `Seccion de ${selectedSchool.name}` : 'Seccion de colegio'}
-            subtitle="Solo se muestran las rubricas creadas por el docente logueado para este colegio."
-            templates={schoolTemplates}
-            selectedTemplateId={schoolSelectedTemplateId}
-            setSelectedTemplateId={setSchoolSelectedTemplateId}
-            formData={schoolFormData}
-            setFormData={setSchoolFormData}
-            isEditMode={schoolIsEditMode}
-            setIsEditMode={setSchoolIsEditMode}
-            isLoading={schoolLoading}
-            isSaving={schoolSaving}
-            error={schoolError}
-            success={schoolSuccess}
-            onSave={handleSaveSchool}
-            disableEdition={!hasSchools}
-            emptyTemplatesMessage="No tienes rubricas creadas para este colegio."
-            sectionKey="school"
-          />
-        </section>
+            <div>
+              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-email">
+                Email
+              </label>
+              <input
+                id="profile-email"
+                name="email"
+                type="email"
+                value={profileData.email}
+                onChange={handleProfileChange}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                disabled={isSavingProfile}
+              />
+              {profileFieldErrors.email && (
+                <p className="mt-1 text-xs text-red-600">{profileFieldErrors.email}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-zinc-500">Rol actual: {authUser?.role === 'admin' ? 'Administrador' : 'Docente'}</p>
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSavingProfile ? 'Guardando...' : 'Guardar datos'}
+              </button>
+            </div>
+
+            {profileError && (
+              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {profileError}
+              </p>
+            )}
+
+            {profileSuccess && (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {profileSuccess}
+              </p>
+            )}
+          </form>
+          </section>
+        )}
+
+        {activeTab === 'rubrics' && (
+          <section className="space-y-4" role="tabpanel" aria-label="Pestaña Rubricas">
+            <div className="inline-flex w-full max-w-md rounded-lg border border-zinc-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Subpestañas de rúbricas">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeRubricTab === 'general'}
+                onClick={() => setActiveRubricTab('general')}
+                className={`w-full rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeRubricTab === 'general' ? 'bg-zinc-800 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
+              >
+                Generales
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeRubricTab === 'school'}
+                onClick={() => setActiveRubricTab('school')}
+                className={`w-full rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeRubricTab === 'school' ? 'bg-zinc-800 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
+              >
+                Por colegio
+              </button>
+            </div>
+
+            {activeRubricTab === 'general' && (
+              <div>
+                <RubricSection
+                  title="Rubricas generales"
+                  subtitle="Estas plantillas no dependen de un colegio en particular."
+                  templates={generalTemplates}
+                  selectedTemplateId={generalSelectedTemplateId}
+                  setSelectedTemplateId={setGeneralSelectedTemplateId}
+                  formData={generalFormData}
+                  setFormData={setGeneralFormData}
+                  isEditMode={generalIsEditMode}
+                  setIsEditMode={setGeneralIsEditMode}
+                  isLoading={generalLoading}
+                  isSaving={generalSaving}
+                  error={generalError}
+                  success={generalSuccess}
+                  onSave={handleSaveGeneral}
+                  disableEdition={false}
+                  emptyTemplatesMessage="No tienes rubricas generales creadas."
+                  sectionKey="general"
+                />
+              </div>
+            )}
+
+            {activeRubricTab === 'school' && (
+              <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+                {schoolsError && (
+                  <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {schoolsError}
+                  </p>
+                )}
+
+                {!isLoadingSchools && !hasSchools && (
+                  <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                    Aun no tenes colegios creados. Crea un colegio desde Inicio para habilitar la seccion por colegio.
+                  </p>
+                )}
+
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold text-zinc-900">Rubricas por colegio</h2>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Selecciona un colegio y modifica sus plantillas de rubrica.
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-sm font-medium text-zinc-700" htmlFor="settings-school-select">
+                    Colegio
+                  </label>
+                  <select
+                    id="settings-school-select"
+                    value={selectedSchoolId}
+                    onChange={(event) => setSelectedSchoolId(event.target.value)}
+                    disabled={isLoadingSchools || !hasSchools}
+                    className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                  >
+                    {isLoadingSchools ? (
+                      <option value="">Cargando colegios...</option>
+                    ) : !hasSchools ? (
+                      <option value="">Sin colegios creados</option>
+                    ) : (
+                      schools.map((school) => (
+                        <option key={school._id} value={school._id}>
+                          {school.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <RubricSection
+                  title={selectedSchool ? `Seccion de ${selectedSchool.name}` : 'Seccion de colegio'}
+                  subtitle="Solo se muestran las rubricas creadas por el docente logueado para este colegio."
+                  templates={schoolTemplates}
+                  selectedTemplateId={schoolSelectedTemplateId}
+                  setSelectedTemplateId={setSchoolSelectedTemplateId}
+                  formData={schoolFormData}
+                  setFormData={setSchoolFormData}
+                  isEditMode={schoolIsEditMode}
+                  setIsEditMode={setSchoolIsEditMode}
+                  isLoading={schoolLoading}
+                  isSaving={schoolSaving}
+                  error={schoolError}
+                  success={schoolSuccess}
+                  onSave={handleSaveSchool}
+                  disableEdition={!hasSchools}
+                  emptyTemplatesMessage="No tienes rubricas creadas para este colegio."
+                  sectionKey="school"
+                />
+              </section>
+            )}
+          </section>
+        )}
       </div>
     </main>
   )
