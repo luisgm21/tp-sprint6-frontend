@@ -63,5 +63,16 @@ export const useUsers = () => {
     await fetchUsers()
   }
 
-  return { users, isLoading, error, updateUser, deactivateUser, deleteUser, refetch: fetchUsers }
+  const createUser = async (body) => {
+    const res = await fetch(`${API_URL}/api/users/create`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify(body),
+    })
+    const data = await safeJson(res, {})
+    if (!res.ok) throw new Error(data.error || 'Error al crear usuario')
+    await fetchUsers()
+  }
+
+  return { users, isLoading, error, updateUser, deactivateUser, deleteUser, createUser, refetch: fetchUsers }
 }

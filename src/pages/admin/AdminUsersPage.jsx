@@ -4,13 +4,15 @@ import { useAppContext } from '../../context/appContext'
 import { useUsers } from '../../hooks/useUsers'
 import UserTable from '../../components/admin/UserTable'
 import EditUserModal from '../../components/admin/EditUserModal'
+import CreateUserModal from '../../components/admin/CreateUserModal'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 const AdminUsersPage = () => {
   const { authUser } = useAppContext()
-  const { users, isLoading, error, updateUser, deactivateUser, deleteUser } = useUsers()
+  const { users, isLoading, error, updateUser, deactivateUser, deleteUser, createUser } = useUsers()
 
   const [editingUser, setEditingUser] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -47,11 +49,33 @@ const AdminUsersPage = () => {
     }
   }
 
+  const handleCreate = async (data) => {
+    setActionLoading(true)
+    setActionError('')
+    try {
+      await createUser(data)
+      setShowCreateModal(false)
+      Swal.fire('Éxito', 'Usuario creado correctamente', 'success')
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-zinc-900">Panel de administración</h1>
-        <p className="mt-1 text-sm text-zinc-500">Gestión de usuarios del sistema</p>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900">Panel de administración</h1>
+          <p className="mt-1 text-sm text-zinc-500">Gestión de usuarios del sistema</p>
+        </div>
+        <button
+          onClick={() => { setActionError(''); setShowCreateModal(true) }}
+          className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
+        >
+          Crear usuario
+        </button>
       </div>
 
       {error && (
@@ -79,6 +103,15 @@ const AdminUsersPage = () => {
           user={editingUser}
           onClose={() => { setEditingUser(null); setActionError('') }}
           onSave={handleSave}
+          isLoading={actionLoading}
+          error={actionError}
+        />
+      )}
+
+      {showCreateModal && (
+        <CreateUserModal
+          onClose={() => { setShowCreateModal(false); setActionError('') }}
+          onCreate={handleCreate}
           isLoading={actionLoading}
           error={actionError}
         />
