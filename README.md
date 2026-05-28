@@ -43,17 +43,19 @@ VITE_API_URL=http://localhost:3000
 
 ## Deploy
 
-Agrega aquí el enlace real de tu deploy frontend:
+URL pública del frontend:
+
+https://sprint6morelli.netlify.app
+
+Para copiar rápido (botón Copy en GitHub):
 
 ```txt
-https://sprint6morelli.netlify.app
+FRONTEND_URL=https://sprint6morelli.netlify.app
 ```
 
-En GitHub, puedes usar el icono de copiar del bloque de código para copiar el vínculo rápidamente.
-
-Si también quieres documentar la API desplegada, agrega otra línea en este formato:
+Si también quieres documentar la API desplegada:
 
 ```txt
-Frontend: https://sprint6morelli.netlify.app
-Backend API: https://tp-sprint6-backend.onrender.com
+FRONTEND_URL=https://sprint6morelli.netlify.app
+BACKEND_URL=https://tp-sprint6-backend.onrender.com
 ```
