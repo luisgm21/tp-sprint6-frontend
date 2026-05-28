@@ -1,16 +1,59 @@
-# React + Vite
+# TP Sprint 6 - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación frontend desarrollada con React + Vite para la gestión académica, con autenticación y vistas según rol.
 
-Currently, two official plugins are available:
+## Descripción del proyecto
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Este frontend consume una API backend para administrar:
 
-## React Compiler
+- Usuarios (admin)
+- Cursos y estudiantes
+- Evaluaciones numéricas, por rúbrica y checklist
+- Plantillas de rúbricas (generales y por colegio)
+- Configuración de perfil
+- Modo oscuro
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+La interfaz distingue permisos por rol, principalmente administrador y docente.
 
-## Expanding the ESLint configuration
+## Tecnologías
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- React
+- Vite
+- React Router
+- Tailwind CSS
+- SweetAlert2
+- Zod
+
+## Scripts disponibles
+
+```bash
+pnpm install
+pnpm dev
+pnpm build
+pnpm preview
+```
+
+## Variables de entorno
+
+Crear archivo `.env.local` con:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+## Deploy
+
+Agrega aquí el enlace real de tu deploy frontend:
+
+```txt
+https://sprint6morelli.netlify.app
+```
+
+En GitHub, puedes usar el icono de copiar del bloque de código para copiar el vínculo rápidamente.
+
+Si también quieres documentar la API desplegada, agrega otra línea en este formato:
+
+```txt
+Frontend: https://sprint6morelli.netlify.app
+Backend API: https://tp-sprint6-backend.onrender.com
+```
