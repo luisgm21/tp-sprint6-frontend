@@ -26,7 +26,7 @@ const MainLayout = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
+    <div className="min-h-screen w-full flex flex-col bg-zinc-100 text-zinc-900 transition-colors">
       <Navbar config={navConfig} />
         <Outlet />
       <Footer />

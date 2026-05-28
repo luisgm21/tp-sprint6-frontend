@@ -15,7 +15,7 @@ const defaultConfig = {
 
 const Navbar = ({ config = defaultConfig }) => {
   const navigate = useNavigate()
-  const { authUser, isAuthenticated, logout } = useAppContext()
+  const { authUser, isAuthenticated, logout, isDarkMode, toggleDarkMode } = useAppContext()
   const { brand, links = [] } = config
 
   const handleLogout = () => {
@@ -34,6 +34,16 @@ const Navbar = ({ config = defaultConfig }) => {
         </NavLink>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
+            title={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
+          >
+            {isDarkMode ? 'Claro' : 'Oscuro'}
+          </button>
+
           <ul className="flex items-center gap-1 sm:gap-2">
             {links.map((link) => (
               <li key={link.to}>

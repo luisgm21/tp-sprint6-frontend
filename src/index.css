@@ -1,1 +1,59 @@
 @import "tailwindcss";
+
+:root {
+	color-scheme: light;
+}
+
+:root.dark {
+	color-scheme: dark;
+}
+
+:root.dark body {
+	background-color: #09090b;
+	color: #e4e4e7;
+}
+
+:root.dark .bg-white,
+:root.dark .bg-zinc-50,
+:root.dark .bg-zinc-100 {
+	background-color: #18181b;
+}
+
+:root.dark .bg-zinc-200 {
+	background-color: #27272a;
+}
+
+:root.dark .text-zinc-900,
+:root.dark .text-zinc-800,
+:root.dark .text-zinc-700 {
+	color: #f4f4f5;
+}
+
+:root.dark .text-zinc-600,
+:root.dark .text-zinc-500 {
+	color: #d4d4d8;
+}
+
+:root.dark .border-zinc-300,
+:root.dark .border-zinc-200,
+:root.dark .border-zinc-100 {
+	border-color: #3f3f46;
+}
+
+:root.dark .hover\:bg-zinc-50:hover,
+:root.dark .hover\:bg-zinc-100:hover,
+:root.dark .hover\:bg-zinc-200:hover {
+	background-color: #27272a;
+}
+
+:root.dark .hover\:text-zinc-900:hover,
+:root.dark .hover\:text-zinc-950:hover {
+	color: #ffffff;
+}
+
+:root.dark input,
+:root.dark select,
+:root.dark textarea {
+	background-color: #18181b;
+	color: #f4f4f5;
+}
