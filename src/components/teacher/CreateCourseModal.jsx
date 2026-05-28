@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { createCourseSchema, zodToFieldErrors } from '../../validators/courseValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
 import { useAppContext } from '../../context/appContext'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const MONTH_OPTIONS = [
   { value: 1, label: 'Enero' },
   { value: 2, label: 'Febrero' },
@@ -70,7 +71,7 @@ const CreateCourseModal = ({ open, onClose, onCreated, schools }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await safeJson(res, {})
       if (!res.ok) throw new Error(data.error || 'Error al crear curso')
       setFormData({ name: '', description: '', schoolId: '', startMonth: '1', endMonth: '12' })
       setFieldErrors({})

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import FormRegister from '../components/FormRegister'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../../config/env'
+import { safeJson } from '../../../util/safeJson'
 
 const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -19,7 +19,7 @@ const RegisterPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
-      const data = await response.json()
+        const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'Error al registrarse')
       setSuccess(true)
       setTimeout(() => navigate('/login'), 2000)

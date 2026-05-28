@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '../../context/appContext'
 import { updateUserSchema, zodToFieldErrors } from '../../validators/authValidators'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const defaultLevels = [
   { label: 'Excelente', score: 10 },
@@ -264,6 +264,11 @@ const TeacherSettingsPage = () => {
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [passwordData, setPasswordData] = useState({ password: '', confirmPassword: '' })
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
 
   const [schools, setSchools] = useState([])
   const [selectedSchoolId, setSelectedSchoolId] = useState('')
@@ -326,7 +331,7 @@ const TeacherSettingsPage = () => {
       const response = await fetch(`${API_URL}/api/schools/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const data = await response.json().catch(() => [])
+      const data = await safeJson(response, [])
       if (response.status === 401 || response.status === 403) {
         logout()
         return
@@ -351,7 +356,7 @@ const TeacherSettingsPage = () => {
     setGeneralError('')
     try {
       const response = await fetch(`${API_URL}/api/assessment-templates/global?type=rubric`)
-      const data = await response.json().catch(() => [])
+      const data = await safeJson(response, [])
       if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las rubricas generales')
 
       const own = filterOwnTemplates(data)
@@ -378,7 +383,7 @@ const TeacherSettingsPage = () => {
     setSchoolError('')
     try {
       const response = await fetch(`${API_URL}/api/assessment-templates/school/${schoolId}?type=rubric`)
-      const data = await response.json().catch(() => [])
+      const data = await safeJson(response, [])
       if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las rubricas del colegio')
 
       const own = filterOwnTemplates(data)
@@ -481,7 +486,7 @@ const TeacherSettingsPage = () => {
       body: JSON.stringify(payload),
     })
 
-    const data = await response.json().catch(() => ({}))
+    const data = await safeJson(response, {})
     if (!response.ok) throw new Error(data.error || 'No se pudo guardar la plantilla')
 
     if (section === 'general') {
@@ -598,7 +603,7 @@ const TeacherSettingsPage = () => {
         }),
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
 
       if (response.status === 401 || response.status === 403) {
         logout()
@@ -621,6 +626,77 @@ const TeacherSettingsPage = () => {
       setProfileError(error.message)
     } finally {
       setIsSavingProfile(false)
+    }
+  }
+
+  const handlePasswordChange = (event) => {
+    const { name, value } = event.target
+    setPasswordData((prev) => ({ ...prev, [name]: value }))
+    setPasswordFieldErrors((prev) => ({ ...prev, [name]: '' }))
+    setPasswordError('')
+    setPasswordSuccess('')
+  }
+
+  const validatePasswordForm = () => {
+    const nextErrors = {}
+
+    if (!passwordData.password || passwordData.password.length < 6) {
+      nextErrors.password = 'La contraseña debe tener al menos 6 caracteres'
+    }
+
+    if (!passwordData.confirmPassword) {
+      nextErrors.confirmPassword = 'Confirma la contraseña'
+    }
+
+    if (passwordData.password && passwordData.confirmPassword && passwordData.password !== passwordData.confirmPassword) {
+      nextErrors.confirmPassword = 'Las contraseñas no coinciden'
+    }
+
+    setPasswordFieldErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const handleSavePassword = async (event) => {
+    event.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (!authUserId) {
+      setPasswordError('No se pudo identificar al usuario logueado')
+      return
+    }
+
+    if (!validatePasswordForm()) return
+
+    setIsSavingPassword(true)
+    try {
+      const response = await fetch(`${API_URL}/api/users/update/${authUserId}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: passwordData.password }),
+      })
+
+      const data = await safeJson(response, {})
+
+      if (response.status === 401 || response.status === 403) {
+        logout()
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo actualizar la contraseña')
+      }
+
+      setPasswordSuccess(data.message || 'Contraseña actualizada correctamente')
+      setPasswordData({ password: '', confirmPassword: '' })
+      setPasswordFieldErrors({})
+    } catch (error) {
+      setPasswordError(error.message)
+    } finally {
+      setIsSavingPassword(false)
     }
   }
 
@@ -721,6 +797,75 @@ const TeacherSettingsPage = () => {
             {profileSuccess && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {profileSuccess}
+              </p>
+            )}
+          </form>
+
+          <div className="my-5 border-t border-zinc-200" />
+
+          <div>
+            <h3 className="text-base font-semibold text-zinc-900">Cambiar contraseña</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Define una nueva contraseña para tu cuenta.
+            </p>
+          </div>
+
+          <form onSubmit={handleSavePassword} className="mt-4 space-y-4" noValidate>
+            <div>
+              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-password">
+                Nueva contraseña
+              </label>
+              <input
+                id="profile-password"
+                name="password"
+                type="password"
+                value={passwordData.password}
+                onChange={handlePasswordChange}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                disabled={isSavingPassword}
+              />
+              {passwordFieldErrors.password && (
+                <p className="mt-1 text-xs text-red-600">{passwordFieldErrors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-confirm-password">
+                Confirmar contraseña
+              </label>
+              <input
+                id="profile-confirm-password"
+                name="confirmPassword"
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={handlePasswordChange}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                disabled={isSavingPassword}
+              />
+              {passwordFieldErrors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-600">{passwordFieldErrors.confirmPassword}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={isSavingPassword}
+                className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSavingPassword ? 'Guardando...' : 'Actualizar contraseña'}
+              </button>
+            </div>
+
+            {passwordError && (
+              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {passwordError}
+              </p>
+            )}
+
+            {passwordSuccess && (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {passwordSuccess}
               </p>
             )}
           </form>

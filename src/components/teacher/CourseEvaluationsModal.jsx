@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import LoadingSpinner from '../common/LoadingSpinner'
 import { useAppContext } from '../../context/appContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const MONTHS = [
   { index: 0, label: 'Ene' },
@@ -248,10 +248,10 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           fetch(`${API_URL}/api/assessment-templates/school/${schoolId}/available?type=checklist`),
         ])
 
-        const enrollmentsData = await enrollmentsRes.json().catch(() => [])
-        const evaluationsData = await evaluationsRes.json().catch(() => [])
-        const rubricData = await rubricRes.json().catch(() => [])
-        const checklistData = await checklistRes.json().catch(() => [])
+        const enrollmentsData = await safeJson(enrollmentsRes, [])
+        const evaluationsData = await safeJson(evaluationsRes, [])
+        const rubricData = await safeJson(rubricRes, [])
+        const checklistData = await safeJson(checklistRes, [])
 
         if (!enrollmentsRes.ok) throw new Error(enrollmentsData.error || 'No se pudieron cargar los alumnos del curso')
         if (!evaluationsRes.ok) throw new Error(evaluationsData.error || 'No se pudieron cargar las evaluaciones del curso')
@@ -435,7 +435,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ score, date }),
             })
-            const updateData = await updateRes.json().catch(() => ({}))
+            const updateData = await safeJson(updateRes, {})
             if (!updateRes.ok) throw new Error(updateData.error || 'No se pudo actualizar una nota mensual')
             pendingActions += 1
           } else {
@@ -453,7 +453,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
                 createdBy: userId,
               }),
             })
-            const createData = await createRes.json().catch(() => ({}))
+            const createData = await safeJson(createRes, {})
             if (!createRes.ok) throw new Error(createData.error || 'No se pudo crear una nota mensual')
             pendingActions += 1
           }
@@ -465,7 +465,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
         const deleteRes = await fetch(`${API_URL}/api/evaluations/delete/${evaluationId}`, {
           method: 'DELETE',
         })
-        const deleteData = await deleteRes.json().catch(() => ({}))
+        const deleteData = await safeJson(deleteRes, {})
         if (!deleteRes.ok) throw new Error(deleteData.error || 'No se pudo eliminar una nota mensual')
         pendingActions += 1
       }
@@ -477,7 +477,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
       }
 
       const evaluationsRes = await fetch(`${API_URL}/api/evaluations/course/${course._id}`)
-      const evaluationsData = await evaluationsRes.json().catch(() => [])
+      const evaluationsData = await safeJson(evaluationsRes, [])
       if (!evaluationsRes.ok) throw new Error(evaluationsData.error || 'No se pudieron refrescar las evaluaciones')
 
       const refreshedEvaluations = Array.isArray(evaluationsData) ? evaluationsData : []
@@ -549,7 +549,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           createdBy: userId,
         }),
       })
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo guardar la evaluación por rúbrica')
 
       setRubricMessage('Evaluación por rúbrica guardada correctamente')
@@ -612,7 +612,7 @@ const CourseEvaluationsModal = ({ open, onClose, course }) => {
           createdBy: userId,
         }),
       })
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo guardar la evaluación checklist')
 
       setChecklistMessage('Evaluación checklist guardada correctamente')

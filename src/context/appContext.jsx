@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { API_URL } from '../config/env'
+import { safeJson } from '../util/safeJson'
 
 const AppContext = createContext()
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const normalizeAuthUser = (user) => {
   if (!user) return null
@@ -54,7 +54,7 @@ export const AppProvider = ({ children }) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     })
-    const data = await response.json()
+    const data = await safeJson(response, {})
     if (!response.ok) throw new Error(data.error || 'Credenciales inválidas')
     const normalizedUser = normalizeAuthUser(data.user)
     localStorage.setItem('token', data.token)

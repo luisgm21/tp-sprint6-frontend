@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { createCourseSchema, zodToFieldErrors } from '../../validators/courseValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const MONTH_OPTIONS = [
   { value: 1, label: 'Enero' },
   { value: 2, label: 'Febrero' },
@@ -69,7 +70,7 @@ const EditCourseModal = ({ open, onClose, onEdited, course, schools }) => {
           endMonth: Number(formData.endMonth),
         }),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await safeJson(res, {})
       if (!res.ok) throw new Error(data.error || 'Error al editar curso')
       setFieldErrors({})
       onEdited?.(data)

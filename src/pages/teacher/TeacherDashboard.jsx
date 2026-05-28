@@ -7,8 +7,8 @@ import EditCourseModal from '../../components/teacher/EditCourseModal'
 import ManageCourseStudentsModal from '../../components/teacher/ManageCourseStudentsModal'
 import CourseEvaluationsModal from '../../components/teacher/CourseEvaluationsModal'
 import { useAppContext } from '../../context/appContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const TeacherDashboard = () => {
   const navigate = useNavigate()
@@ -47,7 +47,7 @@ const TeacherDashboard = () => {
       const schoolsRes = await fetch(`${API_URL}/api/schools/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const schoolsData = await schoolsRes.json().catch(() => [])
+      const schoolsData = await safeJson(schoolsRes, [])
       if (schoolsRes.status === 401 || schoolsRes.status === 403) {
         logout()
         return
@@ -59,7 +59,7 @@ const TeacherDashboard = () => {
       setSchools(schoolsData)
 
       const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${authUser.id}`)
-      const coursesData = await coursesRes.json().catch(() => [])
+      const coursesData = await safeJson(coursesRes, [])
       if (!coursesRes.ok) {
         throw new Error(coursesData.error || 'No se pudieron cargar tus cursos')
       }
@@ -131,7 +131,7 @@ const TeacherDashboard = () => {
     if (!result.isConfirmed) return
     try {
       const res = await fetch(`${API_URL}/api/courses/deactivate/${course._id}`, { method: 'PATCH' })
-      const data = await res.json().catch(() => ({}))
+      const data = await safeJson(res, {})
       if (!res.ok) throw new Error(data.error || 'Error al eliminar curso')
       setCoursesBySchool(prev => {
         const schoolId = course.schoolId

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import Swal from 'sweetalert2'
 import LoadingSpinner from '../common/LoadingSpinner'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const getSchoolId = (course) => {
   if (!course?.schoolId) return ''
@@ -85,7 +85,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
 
     try {
       const response = await fetch(`${API_URL}/api/enrollments/course/${course._id}`)
-      const data = await response.json().catch(() => [])
+      const data = await safeJson(response, [])
       if (!response.ok) throw new Error(data.error || 'No se pudieron cargar los alumnos del curso')
       setEnrollments(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -172,7 +172,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
         body: JSON.stringify(payload),
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudieron guardar los cambios del alumno')
 
       setEditSuccess('Datos del alumno actualizados correctamente.')
@@ -213,7 +213,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
         method: 'PATCH',
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo quitar el alumno del curso')
 
       setDropSuccess('Alumno quitado del curso correctamente.')
@@ -259,7 +259,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
           student: payload,
         }),
       })
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo agregar el alumno')
 
       setFormData({ firstName: '', lastName: '', documentNumber: '' })
@@ -318,7 +318,7 @@ const ManageCourseStudentsModal = ({ open, onClose, course }) => {
         body: JSON.stringify({ schoolId, year, students }),
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo importar el Excel')
 
       setBulkResult(data)

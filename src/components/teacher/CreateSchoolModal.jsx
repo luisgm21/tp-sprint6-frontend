@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { createSchoolSchema, zodToFieldErrors } from '../../validators/schoolValidators'
 import LoadingSpinner from '../common/LoadingSpinner'
 import { useAppContext } from '../../context/appContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const CreateSchoolModal = ({ open, onClose, onCreated }) => {
   const { token, logout } = useAppContext()
@@ -38,7 +38,7 @@ const CreateSchoolModal = ({ open, onClose, onCreated }) => {
         },
         body: JSON.stringify(formData),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await safeJson(res, {})
       if (res.status === 401 || res.status === 403) {
         logout()
         return

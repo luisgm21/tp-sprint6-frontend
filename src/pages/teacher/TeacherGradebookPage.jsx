@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { useAppContext } from '../../context/appContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../../config/env'
+import { safeJson } from '../../util/safeJson'
 
 const MONTHS = [
   { index: 0, label: 'Ene' },
@@ -266,9 +266,9 @@ const TeacherGradebookPage = () => {
           fetch(`${API_URL}/api/evaluations/course/${courseId}`),
         ])
 
-        const courseData = await courseRes.json().catch(() => ({}))
-        const enrollmentsData = await enrollmentsRes.json().catch(() => [])
-        const evaluationsData = await evaluationsRes.json().catch(() => [])
+        const courseData = await safeJson(courseRes, {})
+        const enrollmentsData = await safeJson(enrollmentsRes, [])
+        const evaluationsData = await safeJson(evaluationsRes, [])
 
         if (!courseRes.ok) throw new Error(courseData.error || 'No se pudo cargar el curso')
         if (!enrollmentsRes.ok) throw new Error(enrollmentsData.error || 'No se pudieron cargar los alumnos del curso')
@@ -450,7 +450,7 @@ const TeacherGradebookPage = () => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ score, date }),
             })
-            const updateData = await updateRes.json().catch(() => ({}))
+            const updateData = await safeJson(updateRes, {})
             if (!updateRes.ok) throw new Error(updateData.error || 'No se pudo actualizar una nota mensual')
             pendingActions += 1
           } else {
@@ -468,7 +468,7 @@ const TeacherGradebookPage = () => {
                 createdBy: userId,
               }),
             })
-            const createData = await createRes.json().catch(() => ({}))
+            const createData = await safeJson(createRes, {})
             if (!createRes.ok) throw new Error(createData.error || 'No se pudo crear una nota mensual')
             pendingActions += 1
           }
@@ -480,7 +480,7 @@ const TeacherGradebookPage = () => {
         const deleteRes = await fetch(`${API_URL}/api/evaluations/delete/${evaluationId}`, {
           method: 'DELETE',
         })
-        const deleteData = await deleteRes.json().catch(() => ({}))
+        const deleteData = await safeJson(deleteRes, {})
         if (!deleteRes.ok) throw new Error(deleteData.error || 'No se pudo eliminar una nota mensual')
         pendingActions += 1
       }
@@ -492,7 +492,7 @@ const TeacherGradebookPage = () => {
       }
 
       const evaluationsRes = await fetch(`${API_URL}/api/evaluations/course/${courseId}`)
-      const evaluationsData = await evaluationsRes.json().catch(() => [])
+      const evaluationsData = await safeJson(evaluationsRes, [])
       if (!evaluationsRes.ok) throw new Error(evaluationsData.error || 'No se pudieron refrescar las evaluaciones')
 
       const refreshedEvaluations = Array.isArray(evaluationsData) ? evaluationsData : []
@@ -541,11 +541,11 @@ const TeacherGradebookPage = () => {
         }),
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await safeJson(response, {})
       if (!response.ok) throw new Error(data.error || 'No se pudo actualizar la nota numérica')
 
       const evaluationsRes = await fetch(`${API_URL}/api/evaluations/course/${courseId}`)
-      const evaluationsData = await evaluationsRes.json().catch(() => [])
+      const evaluationsData = await safeJson(evaluationsRes, [])
       if (!evaluationsRes.ok) throw new Error(evaluationsData.error || 'No se pudieron refrescar las evaluaciones')
 
       const refreshedEvaluations = Array.isArray(evaluationsData) ? evaluationsData : []

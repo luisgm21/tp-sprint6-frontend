@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAppContext } from '../context/appContext'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { API_URL } from '../config/env'
+import { safeJson } from '../util/safeJson'
 
 export const useUsers = () => {
   const { token, logout } = useAppContext()
@@ -21,7 +21,7 @@ export const useUsers = () => {
       const res = await fetch(`${API_URL}/api/users`, { headers: authHeaders })
       if (res.status === 401 || res.status === 403) { logout(); return }
       if (!res.ok) throw new Error('Error al obtener usuarios')
-      const data = await res.json()
+      const data = await safeJson(res, [])
       setUsers(data)
     } catch (err) {
       setError(err.message)
@@ -38,7 +38,7 @@ export const useUsers = () => {
       headers: authHeaders,
       body: JSON.stringify(body),
     })
-    const data = await res.json()
+    const data = await safeJson(res, {})
     if (!res.ok) throw new Error(data.error || 'Error al actualizar')
     await fetchUsers()
   }
@@ -48,7 +48,7 @@ export const useUsers = () => {
       method: 'PATCH',
       headers: authHeaders,
     })
-    const data = await res.json()
+    const data = await safeJson(res, {})
     if (!res.ok) throw new Error(data.error || 'Error al desactivar')
     await fetchUsers()
   }
@@ -58,7 +58,7 @@ export const useUsers = () => {
       method: 'DELETE',
       headers: authHeaders,
     })
-    const data = await res.json()
+    const data = await safeJson(res, {})
     if (!res.ok) throw new Error(data.error || 'Error al eliminar')
     await fetchUsers()
   }
