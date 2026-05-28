@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/appContext'
 import { updateUserSchema, zodToFieldErrors } from '../../validators/authValidators'
 import { API_URL } from '../../config/env'
 import { safeJson } from '../../util/safeJson'
+import InputField from '../../components/auth/components/InputField'
 
 const defaultLevels = [
   { label: 'Excelente', score: 10 },
@@ -811,41 +812,31 @@ const TeacherSettingsPage = () => {
           </div>
 
           <form onSubmit={handleSavePassword} className="mt-4 space-y-4" noValidate>
-            <div>
-              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-password">
-                Nueva contraseña
-              </label>
-              <input
-                id="profile-password"
-                name="password"
-                type="password"
-                value={passwordData.password}
-                onChange={handlePasswordChange}
-                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                disabled={isSavingPassword}
-              />
-              {passwordFieldErrors.password && (
-                <p className="mt-1 text-xs text-red-600">{passwordFieldErrors.password}</p>
-              )}
-            </div>
+            <InputField
+              id="profile-password"
+              name="password"
+              label="Nueva contraseña"
+              type="password"
+              value={passwordData.password}
+              onChange={handlePasswordChange}
+              placeholder="Mínimo 6 caracteres"
+              error={passwordFieldErrors.password}
+              disabled={isSavingPassword}
+              autoComplete="new-password"
+            />
 
-            <div>
-              <label className="text-sm font-medium text-zinc-700" htmlFor="profile-confirm-password">
-                Confirmar contraseña
-              </label>
-              <input
-                id="profile-confirm-password"
-                name="confirmPassword"
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                disabled={isSavingPassword}
-              />
-              {passwordFieldErrors.confirmPassword && (
-                <p className="mt-1 text-xs text-red-600">{passwordFieldErrors.confirmPassword}</p>
-              )}
-            </div>
+            <InputField
+              id="profile-confirm-password"
+              name="confirmPassword"
+              label="Confirmar contraseña"
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Repite la contraseña"
+              error={passwordFieldErrors.confirmPassword}
+              disabled={isSavingPassword}
+              autoComplete="new-password"
+            />
 
             <div className="flex justify-end">
               <button
