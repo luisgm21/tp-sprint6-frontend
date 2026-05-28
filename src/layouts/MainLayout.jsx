@@ -20,7 +20,7 @@ const MainLayout = () => {
     links: isAuthenticated
       ? [
           { to: homePath, label: "Inicio" },
-          { to: "/teacher/settings", label: "Configuracion" },
+          ...(authUser?.role === "teacher" ? [{ to: "/teacher/settings", label: "Configuracion" }] : []),
         ]
       : [{ to: homePath, label: "Inicio" }],
   }
